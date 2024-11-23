@@ -1,0 +1,24 @@
+# Ignorer le dossier UNI
+UNI/
+
+# Ignorer l'environnement virtuel
+venv/
+.venv/
+
+# Fichiers spécifiques à Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Fichiers générés par Jupyter Notebook
+.ipynb_checkpoints/
+
+# Fichiers de logs
+*.log
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Configuration de l'IDE
+.vscode/
