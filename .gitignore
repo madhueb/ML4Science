@@ -22,3 +22,5 @@ Thumbs.db
 
 # Configuration de l'IDE
 .vscode/
+data/train_dict.pkl
+data/test_dict.pkl
