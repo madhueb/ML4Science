@@ -173,3 +173,13 @@ class Emb_max(nn.Module):
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
         neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))
         return neg_log_likelihood, None
+
+
+def get_attn_module(encoder_dim, n_attn_latent, att_branches, dropout, gated):
+    """
+    Gets the attention module
+    """
+    if gated:
+        return Attention(M=encoder_dim, L= n_attn_latent,ATTENTION_BRANCHES=att_branches)
+    else:
+        return GatedAttention(M=encoder_dim, L= n_attn_latent,ATTENTION_BRANCHES=att_branches)
