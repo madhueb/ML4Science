@@ -2,10 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-class Attention(nn.Module):
+class Att_net(nn.Module):
     def __init__(self, M=1024, L=128, ATTENTION_BRANCHES=1):
-        super(Attention, self).__init__()
+        super(Att_net, self).__init__()
         self.M = M
         self.L = L
         self.ATTENTION_BRANCHES = ATTENTION_BRANCHES
@@ -16,6 +15,45 @@ class Attention(nn.Module):
             nn.Linear(self.L, self.ATTENTION_BRANCHES) # matrix w (or vector w if self.ATTENTION_BRANCHES==1)
         )
 
+    def forward(self, x):
+        
+        A = self.attention(x)  # KxATTENTION_BRANCHES
+        return A,x
+
+class GatedAtt_net(nn.Module):
+    def __init__(self, M=1024, L=128, ATTENTION_BRANCHES=1):
+        super(GatedAtt_net, self).__init__()
+        self.M = M
+        self.L = L
+        self.ATTENTION_BRANCHES = ATTENTION_BRANCHES
+
+        self.attention_V = nn.Sequential(
+            nn.Linear(self.M, self.L), # matrix V
+            nn.Tanh()
+        )
+
+        self.attention_U = nn.Sequential(
+            nn.Linear(self.M, self.L), # matrix U
+            nn.Sigmoid()
+        )
+
+        self.attention_w = nn.Linear(self.L, self.ATTENTION_BRANCHES) # matrix w (or vector w if self.ATTENTION_BRANCHES==1)
+
+    def forward(self, x):
+        A_V = self.attention_V(x)  # KxL
+        A_U = self.attention_U(x)  # KxL
+        A = self.attention_w(A_V * A_U) # element wise multiplication # KxATTENTION_BRANCHES
+        return A,x
+
+class Attention(nn.Module):
+    def __init__(self, M=1024, L=128, ATTENTION_BRANCHES=1):
+        super(Attention, self).__init__()
+        self.M = M
+        self.L = L
+        self.ATTENTION_BRANCHES = ATTENTION_BRANCHES
+
+        self.attention = Att_net(M, L, ATTENTION_BRANCHES)
+
         self.classifier = nn.Sequential(
             nn.Linear(self.M*self.ATTENTION_BRANCHES, 1),
             nn.Sigmoid()
@@ -23,7 +61,8 @@ class Attention(nn.Module):
 
     def forward(self, x):
         x = x.squeeze(0)
-        A = self.attention(x)  # KxATTENTION_BRANCHES
+        A,_ = self.attention(x)  # KxATTENTION_BRANCHES
+        
         A = torch.transpose(A, 1, 0)  # ATTENTION_BRANCHESxK
         A = F.softmax(A, dim=1)  # softmax over K
 
@@ -58,18 +97,7 @@ class GatedAttention(nn.Module):
         self.ATTENTION_BRANCHES = ATTENTION_BRANCHES
 
 
-        self.attention_V = nn.Sequential(
-            nn.Linear(self.M, self.L), # matrix V
-            nn.Tanh()
-        )
-
-        self.attention_U = nn.Sequential(
-            nn.Linear(self.M, self.L), # matrix U
-            nn.Sigmoid()
-        )
-
-        self.attention_w = nn.Linear(self.L, self.ATTENTION_BRANCHES) # matrix w (or vector w if self.ATTENTION_BRANCHES==1)
-
+        self.attention = GatedAtt_net(M, L, ATTENTION_BRANCHES)
         self.classifier = nn.Sequential(
             nn.Linear(self.M*self.ATTENTION_BRANCHES, 1),
             nn.Sigmoid()
@@ -77,9 +105,7 @@ class GatedAttention(nn.Module):
 
     def forward(self, x):
         x = x.squeeze(0)
-        A_V = self.attention_V(x)  # KxL
-        A_U = self.attention_U(x)  # KxL
-        A = self.attention_w(A_V * A_U) # element wise multiplication # KxATTENTION_BRANCHES
+        A,_ = self.attention(x)  # KxATTENTION_BRANCHES
         A = torch.transpose(A, 1, 0)  # ATTENTION_BRANCHESxK
         A = F.softmax(A, dim=1)  # softmax over K
 
@@ -180,6 +206,6 @@ def get_attn_module(encoder_dim, n_attn_latent, att_branches, dropout, gated):
     Gets the attention module
     """
     if gated:
-        return Attention(M=encoder_dim, L= n_attn_latent,ATTENTION_BRANCHES=att_branches)
+        return Att_net(M=encoder_dim, L= n_attn_latent,ATTENTION_BRANCHES=att_branches)
     else:
-        return GatedAttention(M=encoder_dim, L= n_attn_latent,ATTENTION_BRANCHES=att_branches)
+        return GatedAtt_net(M=encoder_dim, L= n_attn_latent,ATTENTION_BRANCHES=att_branches)

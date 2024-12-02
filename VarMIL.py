@@ -6,6 +6,8 @@ import torch.nn as nn
 
 from numbers import Number
 import numpy as np
+import torch.nn.functional as F
+
 
 
 from MIL_layers import get_attn_module
@@ -20,12 +22,6 @@ class AttnMeanAndVarPoolMIL( nn.Module):
     ----------
     encoder_dim: int
         Dimension of the encoder features. This is either the dimension output by the instance encoder (if there is one) or it is the dimension of the input feature (if there is no encoder).
-
-    encoder: None, nn.Module
-        (Optional) The bag instance encoding network.
-
-    head: nn.Module, int, tuple of ints
-        (Optional) The network after the attention mean pooling step. If an int is provided a single linear layer is added. If a tuple of ints is provided then a multi-layer perceptron with RELU activations is added.
 
     n_attn_latent: int, None
         Number of latent dimension for the attention layer. If None, will default to (n_in + 1) // 2.
@@ -59,9 +55,7 @@ class AttnMeanAndVarPoolMIL( nn.Module):
                  dropout=False):
         super().__init__()
 
-        ###########################
-        # Setup encode and attend #
-        ###########################
+
         self.separate_attn = bool(separate_attn)
 
         if self.separate_attn:
@@ -82,9 +76,7 @@ class AttnMeanAndVarPoolMIL( nn.Module):
             
         self.enc_and_attend = attention
 
-        ####################
-        # Variance pooling #
-        ####################
+        # variance pooling
         self.var_pool = VarPool(encoder_dim=encoder_dim,
                                 n_var_pools=n_var_pools,
                                 log_eps=log_eps,
@@ -97,16 +89,12 @@ class AttnMeanAndVarPoolMIL( nn.Module):
 
     def get_encode_and_attend(self, bag):
 
-        ###################################
-        # Instance encoding and attention #
-        ###################################
-
-        # instance encodings and attention scores
-
-        _,_,attn_scores = self.enc_and_attend.forward(bag)
+        # Get attention scores 
+        attn_scores,_ = self.enc_and_attend.forward(bag.squeeze(0))
+        attn_scores =torch.transpose(attn_scores, 1, 0)
+        attn_scores = F.softmax(attn_scores, dim=1)
 
 
-        # normalize attetion
         if self.separate_attn:  
             mean_attn = attn_scores[0]
 
@@ -123,16 +111,11 @@ class AttnMeanAndVarPoolMIL( nn.Module):
 
         bag_feats, mean_attn, var_attn = self.get_encode_and_attend(bag)
 
-        #####################
-        # Attention pooling #
-        #####################
-
         # (batch_size, n_instances, encode_dim) -> (batch_size, encoder_dim)
         mean_attn = mean_attn.unsqueeze(-1)
         weighted_avg_bag_feats = (bag_feats * mean_attn).sum(1)
 
         var_pooled_bag_feats = self.var_pool(bag_feats, var_attn)
-        # (batch_size, n_var_pool)
 
         ################################
         # get output from head network #
@@ -141,6 +124,8 @@ class AttnMeanAndVarPoolMIL( nn.Module):
             torch.cat((weighted_avg_bag_feats, var_pooled_bag_feats),
                       dim=1)
         # (batch_size, encode_dim +  n_var_pool)
+        
+
         Y_prob = self.classifier(merged_bag_feats)
         Y_hat = torch.ge(Y_prob, 0.5).float()
         return Y_prob, Y_hat, merged_bag_feats
