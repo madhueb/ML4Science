@@ -48,7 +48,7 @@ class VarMIL( nn.Module):
     ----------
     Ilse, M., Tomczak, J. and Welling, M., 2018, July. Attention-based deep multiple instance learning. In International conference on machine learning (pp. 2127-2136). PMLR.
     """
-    def __init__(self, embed_size, 
+    def __init__(self, embed_size=1024, 
                  hidden_size=128, gated=True,
                  separate_attn=False, n_var_pools=100,
                  act_func='sqrt', log_eps=0.01,

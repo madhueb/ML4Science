@@ -8,9 +8,9 @@ from MIL_layers import get_attn_module
 
 """
 args:
-    gate: whether to use gated attention network
+    gated: whether to use gated attention network
     size_arg: config for network size
-    dropout: whether to use dropout
+    dropout:value of dropout
     k_sample: number of positive/neg patches to sample for instance-level training
     n_classes: number of classes 
     instance_loss_fn: loss function to supervise instance-level training
@@ -18,14 +18,14 @@ args:
 """
 
 class CLAM_SB(nn.Module):
-    def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
+    def __init__(self, gated = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_size=1024,bag_weight=0.5):
         super().__init__()
         self.size_dict = {"small": [embed_size, 512, 256], "big": [embed_size, 512, 384]}
         size = self.size_dict[size_arg]
         fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         
-        attention_net = get_attn_module(size[1], size[2], 1, dropout, gate)
+        attention_net = get_attn_module(size[1], size[2], 1, dropout, gated)
 
         fc.append(attention_net)
         self.attention_net = nn.Sequential(*fc)
