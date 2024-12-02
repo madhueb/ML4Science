@@ -12,18 +12,16 @@ args:
     size_arg: config for network size
     dropout: whether to use dropout
     k_sample: number of positive/neg patches to sample for instance-level training
-    dropout: whether to use dropout (p = 0.25)
     n_classes: number of classes 
     instance_loss_fn: loss function to supervise instance-level training
     subtyping: whether it's a subtyping problem
 """
 
-loss_fn = nn.CrossEntropyLoss()
 class CLAM_SB(nn.Module):
     def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024,bag_weight=0.5):
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_size=1024,bag_weight=0.5):
         super().__init__()
-        self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
+        self.size_dict = {"small": [embed_size, 512, 256], "big": [embed_size, 512, 384]}
         size = self.size_dict[size_arg]
         fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         
@@ -138,7 +136,7 @@ class CLAM_SB(nn.Module):
         logits, Y_prob, Y_hat, _, instance_dict = self.forward(X,instance_eval=True,label=Y)
         _,Y_prob, _, A,_ = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        loss = loss_fn(logits, Y)
+        loss = self.instance_loss_fn(logits, Y)
         instance_loss = instance_dict['instance_loss']
         total_loss = self.bag_weight * loss + (1-self.bag_weight) * instance_loss 
 
@@ -146,9 +144,9 @@ class CLAM_SB(nn.Module):
 
 # class CLAM_MB(CLAM_SB):
 #     def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
-#         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
+#         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_size=1024):
 #         nn.Module.__init__(self)
-#         self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
+#         self.size_dict = {"small": [embed_size, 512, 256], "big": [embed_size, 512, 384]}
 #         size = self.size_dict[size_arg]
 #         fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
 #         if gate:
