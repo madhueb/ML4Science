@@ -6,28 +6,24 @@ import torch.nn as nn
 
 from numbers import Number
 import numpy as np
+import torch.nn.functional as F
+
 
 
 from MIL_layers import get_attn_module
 
 
 
-class AttnMeanAndVarPoolMIL( nn.Module):
+class VarMIL( nn.Module):
     """
     Attention mean  and variance pooling architecture.
 
     Parameters
     ----------
-    encoder_dim: int
+    embed_size: int
         Dimension of the encoder features. This is either the dimension output by the instance encoder (if there is one) or it is the dimension of the input feature (if there is no encoder).
 
-    encoder: None, nn.Module
-        (Optional) The bag instance encoding network.
-
-    head: nn.Module, int, tuple of ints
-        (Optional) The network after the attention mean pooling step. If an int is provided a single linear layer is added. If a tuple of ints is provided then a multi-layer perceptron with RELU activations is added.
-
-    n_attn_latent: int, None
+    hidden_size: int, None
         Number of latent dimension for the attention layer. If None, will default to (n_in + 1) // 2.
 
     gated: bool
@@ -52,29 +48,27 @@ class AttnMeanAndVarPoolMIL( nn.Module):
     ----------
     Ilse, M., Tomczak, J. and Welling, M., 2018, July. Attention-based deep multiple instance learning. In International conference on machine learning (pp. 2127-2136). PMLR.
     """
-    def __init__(self, encoder_dim, 
-                 n_attn_latent=None, gated=True,
+    def __init__(self, embed_size=1024, 
+                 hidden_size=128, gated=True,
                  separate_attn=False, n_var_pools=100,
                  act_func='sqrt', log_eps=0.01,
-                 dropout=False):
+                 dropout=0.):
         super().__init__()
 
-        ###########################
-        # Setup encode and attend #
-        ###########################
+
         self.separate_attn = bool(separate_attn)
 
         if self.separate_attn:
-            attention = get_attn_module(encoder_dim=encoder_dim,
-                                        n_attn_latent=n_attn_latent,
+            attention = get_attn_module(embed_size=embed_size,
+                                        hidden_size=hidden_size,
                                         att_branches =2,
                                         dropout=dropout,
                                         gated=gated)
 
 
         else:
-            attention = get_attn_module(encoder_dim=encoder_dim,
-                                        n_attn_latent=n_attn_latent,
+            attention = get_attn_module(embed_size=embed_size,
+                                        hidden_size=hidden_size,
                                         att_branches =1,
                                         dropout=dropout,
                                         gated=gated)
@@ -82,31 +76,25 @@ class AttnMeanAndVarPoolMIL( nn.Module):
             
         self.enc_and_attend = attention
 
-        ####################
-        # Variance pooling #
-        ####################
-        self.var_pool = VarPool(encoder_dim=encoder_dim,
+        # variance pooling
+        self.var_pool = VarPool(embed_size=embed_size,
                                 n_var_pools=n_var_pools,
                                 log_eps=log_eps,
                                 act_func=act_func)
         
         self.classifier = nn.Sequential(
-            nn.Linear(encoder_dim + n_var_pools, 1),
+            nn.Linear(embed_size + n_var_pools, 1),
             nn.Sigmoid()
         )
 
     def get_encode_and_attend(self, bag):
 
-        ###################################
-        # Instance encoding and attention #
-        ###################################
-
-        # instance encodings and attention scores
-
-        _,_,attn_scores = self.enc_and_attend.forward(bag)
+        # Get attention scores 
+        attn_scores,_ = self.enc_and_attend.forward(bag.squeeze(0))
+        attn_scores =torch.transpose(attn_scores, 1, 0)
+        attn_scores = F.softmax(attn_scores, dim=1)
 
 
-        # normalize attetion
         if self.separate_attn:  
             mean_attn = attn_scores[0]
 
@@ -123,16 +111,11 @@ class AttnMeanAndVarPoolMIL( nn.Module):
 
         bag_feats, mean_attn, var_attn = self.get_encode_and_attend(bag)
 
-        #####################
-        # Attention pooling #
-        #####################
-
-        # (batch_size, n_instances, encode_dim) -> (batch_size, encoder_dim)
+        # (batch_size, n_instances, encode_dim) -> (batch_size, embed_size)
         mean_attn = mean_attn.unsqueeze(-1)
         weighted_avg_bag_feats = (bag_feats * mean_attn).sum(1)
 
         var_pooled_bag_feats = self.var_pool(bag_feats, var_attn)
-        # (batch_size, n_var_pool)
 
         ################################
         # get output from head network #
@@ -141,6 +124,8 @@ class AttnMeanAndVarPoolMIL( nn.Module):
             torch.cat((weighted_avg_bag_feats, var_pooled_bag_feats),
                       dim=1)
         # (batch_size, encode_dim +  n_var_pool)
+        
+
         Y_prob = self.classifier(merged_bag_feats)
         Y_hat = torch.ge(Y_prob, 0.5).float()
         return Y_prob, Y_hat, merged_bag_feats
@@ -170,7 +155,7 @@ class VarPool(nn.Module):
 
     Parameters
     ----------
-    encoder_dim: int
+    embed_size: int
         Dimension of the encoder features.
 
     n_var_pools: int
@@ -186,11 +171,11 @@ class VarPool(nn.Module):
         If True, apply attn to var projection. If False, do not apply attn (Mainly for SumMIL)
 
     """
-    def __init__(self, encoder_dim, n_var_pools, act_func='sqrt', log_eps=0.01):
+    def __init__(self, embed_size, n_var_pools, act_func='sqrt', log_eps=0.01):
         super().__init__()
         assert act_func in ['sqrt', 'log', 'sigmoid', 'identity']
 
-        self.var_projections = nn.Linear(encoder_dim, int(n_var_pools),
+        self.var_projections = nn.Linear(embed_size, int(n_var_pools),
                                          bias=False)
         self.act_func = act_func
         self.log_eps = log_eps
@@ -199,11 +184,11 @@ class VarPool(nn.Module):
         """
         Initializes the variance projections from isotropic gaussians such that each projections expected norm is 1
         """
-        encoder_dim, n_pools = self.var_projections.weight.data.shape
+        embed_size, n_pools = self.var_projections.weight.data.shape
 
         self.var_projections.weight.data = \
-            torch.normal(mean=torch.zeros(encoder_dim, n_pools),
-                         std=1/np.sqrt(encoder_dim))
+            torch.normal(mean=torch.zeros(embed_size, n_pools),
+                         std=1/np.sqrt(embed_size))
 
     # def get_projection_vector(self, idx):
     #     """
