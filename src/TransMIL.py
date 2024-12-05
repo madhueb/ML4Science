@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from nystrom_attention import NystromAttention
 import torch.nn.functional as F
-from utils import neg_log_bernouilli
+from src.utils import neg_log_bernouilli
 
 class TransLayer(nn.Module):
 
