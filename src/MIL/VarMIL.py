@@ -8,8 +8,6 @@ from numbers import Number
 import numpy as np
 import torch.nn.functional as F
 
-
-
 from MIL_layers import get_attn_module
 
 
