@@ -46,7 +46,7 @@ def test(test_loader,y_test,model,print_results=True):
             bag_label = label[0]
             if torch.cuda.is_available():
                 data, bag_label = data.cuda(), bag_label.cuda()
-            loss, attention_weights = model.calculate_objective(data, bag_label)
+            loss, _ = model.calculate_objective(data, bag_label)
             test_loss += loss.item()
             error, predicted_label = model.calculate_classification_error(data, bag_label)
             test_error += error
@@ -105,3 +105,5 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
     print('Best hyperparameters:', best_hyperparameters, 'Best error:', best_error, 'Best f1:', best_f1)
 
 
+def neg_log_bernouilli(Y, pred_one): 
+    return -1. * (Y * torch.log(pred_one) + (1. - Y) * torch.log(1-pred_one))
