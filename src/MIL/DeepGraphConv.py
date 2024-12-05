@@ -13,8 +13,8 @@ from torch_geometric.nn import GCNConv, GraphConv, GatedGraphConv, GATConv, SGCo
 from torch_geometric.nn import GraphConv, TopKPooling, SAGPooling
 from torch_geometric.nn import global_mean_pool as gavgp, global_max_pool as gmp, global_add_pool as gap
 from torch_geometric.transforms.normalize_features import NormalizeFeatures
-
-from .patchgcn_utils.model_utils import *
+from MIL_layers import Att_Net_Gated_Dual
+#from .patchgcn_utils.model_utils import *
 
 
 
@@ -33,10 +33,10 @@ class DeepGraphConv_Surv(torch.nn.Module):
         self.conv2 = GINConv(Seq(nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, hidden_dim)))
         self.conv3 = GINConv(Seq(nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, hidden_dim)))
         
-        self.path_attention_head = Attn_Net_Gated(L=hidden_dim, D=hidden_dim, dropout=dropout, n_classes=1)
+        self.path_attention_head = Att_Net_Gated_Dual(L=hidden_dim, D=hidden_dim, dropout=dropout, n_tasks=1)
         self.path_rho = nn.Sequential(*[nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout)])
         self.classifier = torch.nn.Linear(hidden_dim, n_classes)
-
+    
     def relocate(self):
         from torch_geometric.nn import DataParallel
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -88,4 +88,18 @@ class DeepGraphConv_Surv(torch.nn.Module):
         Y_hat = torch.topk(logits, 1, dim = 1)[1]
         Y_prob = F.softmax(logits, dim=1)
         
-        return logits, Y_porb, Y_hat
+        return logits, Y_prob, Y_hat
+
+    def calculate_objective(self, X, Y, edge_index=None, edge_latent=None):
+        Y = Y.float()
+        logits, Y_prob, _ = self.forward(X, edge_index, edge_latent)
+        Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
+        loss = neg_log_bernouilli(Y, Y_prob[0,1])
+        
+        #we don't care about the second argument returned
+        return loss, Y_prob
+
+    def calculate_classification_error(self, X, labels, edge_index=None, edge_latent=None):
+        _, _, Y_hat = self.forward(X, edge_index, edge_latent)
+        error = torch.mean((Y_hat != labels).float())
+        return error, Y_hat
