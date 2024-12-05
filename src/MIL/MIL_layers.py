@@ -204,7 +204,7 @@ class Emb_max(nn.Module):
         return neg_log_likelihood, None
 
 
-def get_attn_module(embed_size, hidden_size, att_branches, dropout, gated):
+def get_attn_module(embed_size, hidden_size, att_branches, dropout=0., gated=False):
     """
     Gets the attention module
     """
