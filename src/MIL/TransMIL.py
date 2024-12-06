@@ -88,7 +88,7 @@ class TransMIL(nn.Module):
         Y_prob = F.softmax(logits, dim=1)
         #Y_prob = torch.sigmoid(logits)
         Y_hat = torch.argmax(logits, dim=1)
-        print(f"logits : {logits}, y_prob : {Y_prob}, y_hat : {Y_hat}")
+        #print(f"logits : {logits}, y_prob : {Y_prob}, y_hat : {Y_hat}")
         return logits, Y_prob, Y_hat
 
 

@@ -21,6 +21,32 @@ class Att_net(nn.Module):
         A = self.attention(x)  # KxATTENTION_BRANCHES
         return A,x
 
+class Att_Net_Gated_Dual(nn.Module):
+
+    def __init__(self, L = 1024, D = 256, dropout = False, n_tasks = 1):
+        super(Att_Net_Gated_Dual, self).__init__()
+        self.attention_a = [
+            nn.Linear(L, D),
+            nn.Tanh()]
+
+        self.attention_b = [nn.Linear(L, D),
+                            nn.Sigmoid()]
+        if dropout:
+            self.attention_a.append(nn.Dropout(0.25))
+            self.attention_b.append(nn.Dropout(0.25))
+
+        self.attention_a = nn.Sequential(*self.attention_a)
+        self.attention_b = nn.Sequential(*self.attention_b)
+
+        self.attention_c = nn.Linear(D, n_tasks)
+
+    def forward(self, x):
+        a = self.attention_a(x)
+        b = self.attention_b(x)
+        A = a.mul(b)
+        A = self.attention_c(A)  # N x n_classes
+        return A, x
+
 class GatedAtt_net(nn.Module):
     def __init__(self, embed_size=1024, hidden_size=128, ATTENTION_BRANCHES=1,dropout=0.):
         super(GatedAtt_net, self).__init__()
@@ -209,6 +235,6 @@ def get_attn_module(embed_size, hidden_size, att_branches, dropout=0., gated=Fal
     Gets the attention module
     """
     if gated:
-        return Att_net(embed_size=embed_size, hidden_size =hidden_size,ATTENTION_BRANCHES=att_branches,dropout=dropout)
-    else:
         return GatedAtt_net(embed_size = embed_size, hidden_size = hidden_size,ATTENTION_BRANCHES=att_branches,dropout=dropout)
+    else:
+        return Att_net(embed_size=embed_size, hidden_size =hidden_size,ATTENTION_BRANCHES=att_branches,dropout=dropout)
