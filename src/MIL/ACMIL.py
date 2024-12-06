@@ -232,24 +232,24 @@ class ACMIL_GA(nn.Module):
         super(ACMIL_GA, self).__init__()
         
         self.loss_fn = loss_fn
-        #self.dimreduction = DimReduction(embed_dim, hidden_size)
+        self.dimreduction = DimReduction(embed_dim, hidden_size)
         
-        self.attention = get_attn_module(embed_dim, hidden_size, att_branches=n_token,gated=True)
+        self.attention = get_attn_module(hidden_size, D, att_branches=n_token,gated=True)
        
         self.classifier = nn.ModuleList()
         for i in range(n_token):
-            self.classifier.append(Classifier_1fc(embed_dim, n_classes, droprate))
+            self.classifier.append(Classifier_1fc(hidden_size, n_classes, droprate))
         
         self.n_masked_patch = n_masked_patch
         self.mask_drop = mask_drop
 
         self.n_token = n_token
         
-        self.Slide_classifier = Classifier_1fc(embed_dim, n_classes, droprate)
+        self.Slide_classifier = Classifier_1fc(hidden_size, n_classes, droprate)
         
     def forward(self, x): ## x: N x L
         x = x.squeeze(0)
-        #x = self.dimreduction(x)
+        x = self.dimreduction(x)
         A,_ = self.attention(x)  ## K x N
         A = torch.transpose(A, 1, 0)
 

@@ -34,6 +34,7 @@ class AttriMIL(nn.Module):
         self.loss_fn = nn.CrossEntropyLoss()
     
     def forward(self, h):
+        h = h.squeeze(0)
         h = h + self.adaptor(h)
         A_raw = torch.empty(self.n_classes, h.size(0), ) # N x 1
         instance_score = torch.empty(1, self.n_classes, h.size(0)).float().to(h.device)
