@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import pdb
 
-from MIL_layers import get_attn_module
+from src.MIL.ABMIL import get_attn_module
 
 """
 args:
@@ -133,8 +133,7 @@ class CLAM_SB(nn.Module):
     def calculate_objective(self, X, Y):
         Y = Y.long()
         Y = Y.unsqueeze(0)  
-        logits, Y_prob, Y_hat, _, instance_dict = self.forward(X,instance_eval=True,label=Y)
-        _,Y_prob, _, A,_ = self.forward(X)
+        logits, Y_prob, _, A, instance_dict = self.forward(X,instance_eval=True,label=Y)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
         loss = self.instance_loss_fn(logits, Y)
         instance_loss = instance_dict['instance_loss']

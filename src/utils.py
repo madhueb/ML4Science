@@ -4,7 +4,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
-from src.MIL.MIL_layers import *
+from src.MIL.ABMIL import *
 from tqdm import tqdm
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
-from MIL_layers import get_attn_module
+from src.MIL.ABMIL import get_attn_module
 
 import torch
 import torch.nn as nn
@@ -17,7 +17,7 @@ class AttriMIL(nn.Module):
     '''
     Multi-Branch ABMIL with constraints
     '''
-    def __init__(self, n_classes=2, dim=512):
+    def __init__(self, n_classes=2, dim=1024):
         super().__init__()
         self.adaptor = nn.Sequential(nn.Linear(dim, dim//2),
                                      nn.ReLU(),
@@ -26,7 +26,7 @@ class AttriMIL(nn.Module):
         attention = []
         classifer = [nn.Linear(dim, 1) for i in range(n_classes)]
         for i in range(n_classes):
-            attention.append(get_attn_module(embed_size=dim, hidden_size=dim//2, ATTENTION_BRANCHES=1))
+            attention.append(get_attn_module(embed_size=dim, hidden_size=dim//2, att_branches=1))
         self.attention_nets = nn.ModuleList(attention)
         self.classifiers = nn.ModuleList(classifer)
         self.n_classes = n_classes
@@ -67,9 +67,9 @@ class AttriMIL(nn.Module):
     def calculate_objective(self, X, Y):
         Y = Y.long()
         Y = Y.unsqueeze(0)  
-        logits, Y_prob, Y_hat, _, instance_dict = self.forward(X,instance_eval=True,label=Y)
-        _,Y_prob, _, A,_ = self.forward(X)
+        logits, Y_prob, _, A, _ = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
         loss = self.loss_fn(logits, Y)
+
         return loss, A
 

@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 
 
-from MIL_layers import get_attn_module
+from src.MIL.ABMIL import get_attn_module
 
 
 
