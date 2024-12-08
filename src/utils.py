@@ -94,7 +94,19 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
     best_hyperparameters = {}
     combinations = generate_hyperparameter_combinations(hyperparameters)
     for hyperparameter in tqdm(combinations):
-        model = model_class(**{key: value for key, value in hyperparameter.items() if key in model_class.__init__.__code__.co_varnames})
+        if len(model_class) > 1 : 
+            i_classifier = model_class['i_classifier']
+            b_classifier = model_class['b_classifier'](
+            **{key: value for key, value in hyperparameter.items() 
+               if key in model_class['b_classifier'].__init__.__code__.co_varnames})
+            model = model_class['dsmil'](
+            i_classifier=i_classifier,
+            b_classifier=b_classifier,
+            **{key: value for key, value in hyperparameter.items() 
+               if key in model_class['dsmil'].__init__.__code__.co_varnames}
+        )
+        else : 
+            model = model_class(**{key: value for key, value in hyperparameter.items() if key in model_class.__init__.__code__.co_varnames})
         for epoch in range(20):
             train(train_loader,epoch,model,lr=hyperparameter['lr'],weight_decay=hyperparameter['weight_decay'],print_results=False)
         test_error,f1 = test(test_loader,y_test,model,print_results=False)
@@ -103,6 +115,8 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
             best_f1 = f1
             best_hyperparameters = hyperparameter
     print('Best hyperparameters:', best_hyperparameters, 'Best error:', best_error, 'Best f1:', best_f1)
+
+
 
 
 def neg_log_bernouilli(Y, pred_one): 

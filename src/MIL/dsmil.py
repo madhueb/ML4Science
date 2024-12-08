@@ -65,10 +65,11 @@ class BClassifier(nn.Module):
         return C, A, B 
     
 class MILNet(nn.Module):
-    def __init__(self, i_classifier, b_classifier):
+    def __init__(self, i_classifier, b_classifier, threshold):
         super(MILNet, self).__init__()
         self.i_classifier = i_classifier
         self.b_classifier = b_classifier
+        self.threshold = threshold
         
     def forward(self, x):
         feats, classes = self.i_classifier(x)
@@ -99,68 +100,6 @@ class MILNet(nn.Module):
         pred_ins, _ = torch.max(pred_ins, 0)  
         prediction = (1/2) * (torch.sigmoid(pred_ins) + torch.sigmoid(pred_bag))
         #need to fine tune threshold
-        threshold = 0.5
-        class_pred = (prediction >= threshold).int()
+        class_pred = (prediction >= self.threshold).int()
         error = torch.mean((class_pred!= labels).float())
         return error, class_pred
-
-#-------------------------------------------------
-
-    def multi_label_roc(labels, predictions, num_classes, pos_label=1):
-        fprs = []
-        tprs = []
-        thresholds = []
-        thresholds_optimal = []
-        aucs = []
-        if len(predictions.shape)==1:
-            predictions = predictions[:, None]
-        print(f"labels shape in multi label roc : {labels.shape}")
-        if labels.ndim == 1:
-            labels = np.expand_dims(labels, axis=-1)
-        for c in range(0, num_classes):
-            label = labels[:, c]
-            prediction = predictions[:, c]
-            fpr, tpr, threshold = roc_curve(label, prediction, pos_label=1)
-            fpr_optimal, tpr_optimal, threshold_optimal = optimal_thresh(fpr, tpr, threshold)
-            # c_auc = roc_auc_score(label, prediction)
-            try:
-                c_auc = roc_auc_score(label, prediction)
-                print("ROC AUC score:", c_auc)
-            except ValueError as e:
-                if str(e) == "Only one class present in y_true. ROC AUC score is not defined in that case.":
-                    print("ROC AUC score is not defined when only one class is present in y_true. c_auc is set to 1.")
-                    c_auc = 1
-                else:
-                    raise e
-
-            aucs.append(c_auc)
-            thresholds.append(threshold)
-            thresholds_optimal.append(threshold_optimal)
-        return aucs, thresholds, thresholds_optimal
-
-    def optimal_thresh(fpr, tpr, thresholds, p=0):
-        loss = (fpr - tpr) - p * tpr / (fpr + tpr + 1)
-        idx = np.argmin(loss, axis=0)
-        return fpr[idx], tpr[idx], thresholds[idx]
-"""
-test part that determinies the final score and final label given the optimal threshold 
-    test_labels = np.array(test_labels)
-    test_predictions = np.array(test_predictions)
-    auc_value, _, thresholds_optimal = multi_label_roc(test_labels, test_predictions, args.num_classes, pos_label=1)
-    if thresholds: thresholds_optimal = thresholds
-    class_prediction_bag = copy.deepcopy(test_predictions)
-    class_prediction_bag[test_predictions>=thresholds_optimal[0]] = 1
-    class_prediction_bag[test_predictions<thresholds_optimal[0]] = 0
-    test_predictions = class_prediction_bag
-    test_labels = np.squeeze(test_labels)
-   
-    bag_score = 0
-    for i in range(0, len(test_df)):
-        bag_score = np.array_equal(test_labels[i], test_predictions[i]) + bag_score         
-    avg_score = bag_score / len(test_df)
-    
-    if return_predictions:
-        return total_loss / len(test_df), avg_score, auc_value, thresholds_optimal, test_predictions, test_labels
-    return total_loss / len(test_df), avg_score, auc_value, thresholds_optimal
-"""
-    
