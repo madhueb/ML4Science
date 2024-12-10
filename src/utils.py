@@ -94,7 +94,7 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
     best_hyperparameters = {}
     combinations = generate_hyperparameter_combinations(hyperparameters)
     for hyperparameter in tqdm(combinations):
-        if len(model_class) > 1 : 
+        if isinstance(model_class, dict) : 
             i_classifier = model_class['i_classifier']
             b_classifier = model_class['b_classifier'](
             **{key: value for key, value in hyperparameter.items() 
