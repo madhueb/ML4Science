@@ -82,24 +82,25 @@ class MILNet(nn.Module):
         Y = Y.float()
         pred_ins, pred_bag, _, _ = self.forward(X)
 
+        #avoid division by zero
         pred_bag = torch.clamp(pred_bag, min=1e-5, max=1. - 1e-5)
         pred_ins = torch.clamp(pred_ins, min=1e-5, max=1. - 1e-5)
 
-        pred_ins, _ = torch.max(pred_ins, 0)  
-        
+        max_pred, _ = torch.max(pred_ins, 0)  
+
         #from the code, they compute the loss for each classifier score and then take the average
-        ins_loss = neg_log_bernouilli(Y, pred_ins)
-        bag_loss = neg_log_bernouilli(Y, pred_bag)
-        total_loss = 0.5*bag_loss + 0.5*ins_loss
+        max_loss = neg_log_bernouilli(Y, torch.sigmoid(max_pred))
+        bag_loss = neg_log_bernouilli(Y, torch.sigmoid(pred_bag))
+        loss = 0.5*bag_loss + 0.5*max_loss
       
         #we don't care about the second argument returned
-        return total_loss, pred_bag
+        return loss, pred_bag
 
     def calculate_classification_error(self, X, labels):
         pred_ins,pred_bag,_, _= self.forward(X)
         pred_ins, _ = torch.max(pred_ins, 0)  
-        prediction = (1/2) * (torch.sigmoid(pred_ins) + torch.sigmoid(pred_bag))
-        #need to fine tune threshold
+        prediction = (1/2) * torch.sigmoid(pred_ins) + torch.sigmoid(pred_bag)
+        
         class_pred = (prediction >= self.threshold).int()
         error = torch.mean((class_pred!= labels).float())
         return error, class_pred
