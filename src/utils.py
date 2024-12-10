@@ -6,6 +6,8 @@ from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 from src.MIL.ABMIL import *
 from tqdm import tqdm
+from sklearn.model_selection import KFold
+from torch.utils.data import DataLoader, Subset
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
     train_loss = 0.
@@ -64,6 +66,41 @@ def test(test_loader,y_test,model,print_results=True):
         print('F1 Score :' , f1_score(y_test, y_pred))
     else:
         return test_error,f1_score(y_test, y_pred)
+
+
+
+def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001, weight_decay=0.0005, batch_size=1):
+    kf = KFold(n_splits=k, shuffle=True, random_state=42)
+    fold_results = []  
+
+    for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
+        print(f'Fold {fold + 1}/{k}')
+        train_subset = Subset(train_dataset, train_idx)
+        val_subset = Subset(train_dataset, val_idx)
+        train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False)
+
+        # extract labels for validation set
+        y_val = [train_dataset[idx][1].item() for idx in val_idx]
+
+        model = model_class
+        if torch.cuda.is_available():
+            model.cuda()
+
+        for epoch in range(1, epochs + 1):
+            train(train_loader, epoch, model, lr, weight_decay)
+
+        print(f'Evaluating Fold {fold + 1}')
+        test_error, f1 = test(val_loader, y_val, model, print_results=False)
+        fold_results.append((test_error, f1))
+
+    avg_test_error = sum(r[0] for r in fold_results) / k
+    avg_f1_score = sum(r[1] for r in fold_results) / k
+    print(f'\nK-Fold Cross-Validation Results:')
+    print(f'Average Test Error: {avg_test_error:.4f}')
+    print(f'Average F1 Score: {avg_f1_score:.4f}')
+
+    return fold_results
 
 
 # Hyperparameter_tuning : 
