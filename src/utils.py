@@ -4,12 +4,15 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
+from sklearn.metrics import confusion_matrix
 from src.MIL.ABMIL import *
 from tqdm import tqdm
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Subset
+import seaborn as sns
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
+    model.train()
     train_loss = 0.
     train_error = 0.
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay) #betas ?

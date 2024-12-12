@@ -1,2 +1,5 @@
 torch
 numpy
+torch_geometric
+tqdm
+seaborn
