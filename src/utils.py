@@ -9,7 +9,8 @@ from src.MIL.ABMIL import *
 from tqdm import tqdm
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Subset
-import seaborn as sns
+import pickle
+#import seaborn as sns
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
     model.train()
@@ -157,7 +158,12 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
     print('Best hyperparameters:', best_hyperparameters, 'Best error:', best_error, 'Best f1:', best_f1)
 
 
-
+def load_data(file_path): 
+    with open(file_path, 'rb') as f:
+        dict = pickle.load(f)
+    return dict
+        
+    
 
 def neg_log_bernouilli(Y, pred_one): 
     return -1. * (Y * torch.log(pred_one) + (1. - Y) * torch.log(1-pred_one))
