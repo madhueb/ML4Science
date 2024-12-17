@@ -3,6 +3,9 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 from src.utils import *    
+import argparse
+from pathlib import Path
+import json
 
 def pipeline_mil(json): 
 
@@ -70,8 +73,16 @@ def pipeline_mil(json):
 
 if __name__=="__main__":
 
-    train_file_path = "data/train_dict.pkl"
-    test_file_path = "data/test_dict.pkl"
+    
+    parser = argparse.ArgumentParser(description='MIL Pipeline')
+    parser.add_argument('--model_config', type=Path, required=True, help='Path to the model configuration file')
+    
+    args = parser.parse_args()
 
-    #pipeline_mil(json)
+    with open(args.model_config, 'r') as f:
+        model_config = json.load(f)
+
+
+    pipeline_mil(model_config)
+
 
