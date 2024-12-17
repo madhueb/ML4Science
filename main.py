@@ -38,7 +38,6 @@ def get_class(model_name):
         return ACMIL_GA
     elif model_name == 'AttriMIL':
         return AttriMIL
-    
     else:
         raise ValueError(f'Unknown model name: {model_name}')
 

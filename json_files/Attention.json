@@ -2,21 +2,23 @@
 "train_file_path" : "data/train_dict.pkl", 
 "test_file_path": "data/test_dict.pkl", 
 "model": {
-    "name": "VarMIL",
-    "class" : "VarMIL", 
+    "name": "Attention", 
     "param": {
         "embed_size":1024, 
-        "hidden_size":500, 
-        "separate_attn":false, 
+        "hidden_size":512, 
         "dropout":0.5
         }
     },
 "training" : {
-    "epoch" : 10, 
+    "epoch" : 20, 
     "lr": 0.001, 
     "weight_decay": 0.005, 
     "batch_size":1
     },
-"cross_val" :false
+"cross_val" :true,
+"cross_val_param": {
+    "k" : 5, 
+    "epoch":20
+}
 }
     
