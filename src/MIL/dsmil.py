@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from utils import neg_log_bernouilli
+from src.utils import neg_log_bernouilli
 import numpy as np
 
 class FCLayer(nn.Module):
