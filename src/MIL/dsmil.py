@@ -14,7 +14,7 @@ class FCLayer(nn.Module):
         return feats, x
 
 class IClassifier(nn.Module):
-    def __init__(self, feature_extractor, feature_size, output_class):
+    def __init__(self, feature_size, output_class, feature_extractor=nn.Identity()):
         super(IClassifier, self).__init__()
         
         self.feature_extractor = feature_extractor      

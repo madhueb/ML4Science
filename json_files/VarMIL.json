@@ -3,7 +3,6 @@
 "test_file_path": "data/test_dict.pkl", 
 "model": {
     "name": "VarMIL",
-    "class" : "VarMIL", 
     "param": {
         "embed_size":1024, 
         "hidden_size":500, 
@@ -17,10 +16,10 @@
     "weight_decay": 0.005, 
     "batch_size":1
     },
-"cross_val" :false,
+"cross_val" :true,
 "cross_val_param": {
     "k" : 5, 
     "epoch":20
-}
+    }
 }
     
