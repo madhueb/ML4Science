@@ -2,11 +2,9 @@
 "train_file_path" : "data/train_dict.pkl", 
 "test_file_path": "data/test_dict.pkl", 
 "model": {
-    "name": "GatedAttention", 
+    "name": "Emb_max", 
     "param": {
-        "embed_size":1024, 
-        "hidden_size":512, 
-        "dropout":0.2
+        "embed_size":1024
         }
     },
 "training" : {
