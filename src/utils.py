@@ -10,6 +10,8 @@ from tqdm import tqdm
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Subset
 import pickle
+from scipy import stats
+import numpy as np
 #import seaborn as sns
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
@@ -98,11 +100,12 @@ def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001
         test_error, f1 = test(val_loader, y_val, model, print_results=False)
         fold_results.append((test_error, f1))
 
-    avg_test_error = sum(r[0] for r in fold_results) / k
-    avg_f1_score = sum(r[1] for r in fold_results) / k
+    f1_scores = [ r[0] for r in fold_results ]
+    errors = [ r[1] for r in fold_results]
+
     print(f'\nK-Fold Cross-Validation Results:')
-    print(f'Average Test Error: {avg_test_error:.4f}')
-    print(f'Average F1 Score: {avg_f1_score:.4f}')
+    print(f'Average Test Error: {np.mean(errors):.4f} +/- {stats.sem(errors):.4f}')
+    print(f'Average F1 Score: {np.mean(f1_scores):.4f} +/- {stats.sem(f1_scores):.4f}')
 
     return fold_results
 

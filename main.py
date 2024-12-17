@@ -40,7 +40,6 @@ def pipeline_mil(json):
 
     # cross_validation
     if (json['cross_val'] == True): 
-        print('hola')
         X_cross_val = np.concatenate((X_train, X_test), axis=0)
         y_cross_val = np.concatenate((y_train, y_test), axis=0)
         cross_val_dataset = TensorDataset(torch.tensor(X_cross_val, dtype=torch.float32),
