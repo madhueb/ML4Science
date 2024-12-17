@@ -63,10 +63,10 @@ def pipeline_mil(json):
     model = json['model']
     model_class = get_class(model['name'])
     if model['name'] == 'dsmil': 
-        i_classifier = model['i_classifier']( **{key: value for key, value in model['i_classifier_param'].items() 
-                                       if key in model['i_classifier'].__init__.__code__.co_varnames})
-        b_classifier = model['b_classifier']( **{key: value for key, value in model['b_classifier_param'].items() 
-                                       if key in model['b_classifier'].__init__.__code__.co_varnames})
+        i_classifier = dmsil.IClassifier( **{key: value for key, value in model['i_classifier_param'].items() 
+                                       if key in dmsil.IClassifier.__init__.__code__.co_varnames})
+        b_classifier = dsmil.BClassifier( **{key: value for key, value in model['b_classifier_param'].items() 
+                                       if key in dsmil.BClassifier.__init__.__code__.co_varnames})
         model_class = model_class(i_classifier=i_classifier,
                                      b_classifier=b_classifier,
                                    **{key: value for key, value in model['param'].items() 
@@ -85,7 +85,7 @@ def pipeline_mil(json):
         cross_param = json['cross_val_param']
         k= cross_param['k']
         epochs = cross_param['epoch']
-        k_fold_cross_validation(test_dataset, model_class,  k, epochs)
+        k_fold_cross_validation(cross_val_dataset, model_class,  k, epochs)
 
 
     else : 
