@@ -19,7 +19,7 @@ from src.utils import *
 
 def get_class(model_name):
     if model_name == 'dsmil':
-        return dsmil
+        return dsmil.MILNet
     elif model_name == 'Emb_max':
         return Emb_max
     elif model_name == 'Emb_mean':

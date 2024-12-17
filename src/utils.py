@@ -63,21 +63,28 @@ def test(test_loader,y_test,model,print_results=True):
             #print('Predicted label: {}, True label: {}'.format(predicted_label.item(), bag_label))
     test_error /= len(test_loader)
     test_loss /= len(test_loader)
-
+    
+    f1 = f1_score(y_test, y_pred)
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    
+    
     if print_results:
         print('\nTest Set, Loss: {:.4f}, Test error: {:.4f}'.format(test_loss, test_error))
-        print('Accuracy :' , accuracy_score(y_test, y_pred))
-        print('Precision :' , precision_score(y_test, y_pred))
-        print('Recall :' , recall_score(y_test, y_pred))
-        print('F1 Score :' , f1_score(y_test, y_pred))
+        print('F1 Score :', f1)
+        print('Accuracy :', accuracy)
+        print('Precision :', precision)
+        print('Recall :', recall)      
     else:
-        return test_error,f1_score(y_test, y_pred)
+        return test_error, f1, accuracy, precision, recall
 
 
 
 def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001, weight_decay=0.0005, batch_size=1):
     kf = KFold(n_splits=k, shuffle=True, random_state=42)
-    fold_results = []  
+    fold_results = []
+ 
 
     for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
         print(f'Fold {fold + 1}/{k}')
@@ -97,15 +104,23 @@ def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001
             train(train_loader, epoch, model, lr, weight_decay)
 
         print(f'Evaluating Fold {fold + 1}')
-        test_error, f1 = test(val_loader, y_val, model, print_results=False)
-        fold_results.append((test_error, f1))
-
-    f1_scores = [ r[0] for r in fold_results ]
-    errors = [ r[1] for r in fold_results]
+        test_error, f1, accuracy, precision, recall = test(val_loader, y_val, model, print_results=False)
+        fold_results.append((test_error, f1, accuracy, precision, recall))
+     
+    errors = [ r[0] for r in fold_results]
+    f1_scores = [ r[1] for r in fold_results ]
+    accuracies = [ r[2] for r in fold_results]
+    precisions = [ r[3] for r in fold_results]
+    recalls = [ r[4] for r in fold_results]
 
     print(f'\nK-Fold Cross-Validation Results:')
     print(f'Average Test Error: {np.mean(errors):.4f} +/- {stats.sem(errors):.4f}')
     print(f'Average F1 Score: {np.mean(f1_scores):.4f} +/- {stats.sem(f1_scores):.4f}')
+    print(f'Average Accuracy: {np.mean(accuracies):.4f} +/- {stats.sem(accuracies):.4f}')
+    print(f'Average Precision: {np.mean(precisions):.4f} +/- {stats.sem(precisions):.4f}')
+    print(f'Average Recall: {np.mean(recalls):.4f} +/- {stats.sem(recalls):.4f}')
+
+
 
     return fold_results
 
