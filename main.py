@@ -63,8 +63,8 @@ def pipeline_mil(json):
     model = json['model']
     model_class = get_class(model['name'])
     if model['name'] == 'dsmil': 
-        i_classifier = dmsil.IClassifier( **{key: value for key, value in model['i_classifier_param'].items() 
-                                       if key in dmsil.IClassifier.__init__.__code__.co_varnames})
+        i_classifier = dsmil.IClassifier( **{key: value for key, value in model['i_classifier_param'].items() 
+                                       if key in dsmil.IClassifier.__init__.__code__.co_varnames})
         b_classifier = dsmil.BClassifier( **{key: value for key, value in model['b_classifier_param'].items() 
                                        if key in dsmil.BClassifier.__init__.__code__.co_varnames})
         model_class = model_class(i_classifier=i_classifier,

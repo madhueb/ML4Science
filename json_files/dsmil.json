@@ -1,33 +1,29 @@
 {
-'train_file_path' : train_file_path, 
-'test_file_path': test_file_path, 
-'model': {
-    'name': 'dsmil',
-    'class' : dsmil.MILNet, 
-    'i_classifier': dsmil.IClassifier,
-    'i_classifier_param': {
-        'feature_extractor':nn.Identity(), 
-        'feature_size': 1024, 
-        'output_class': 1
+    "train_file_path": "data/train_dict.pkl",
+    "test_file_path": "data/test_dict.pkl",
+    "model": {
+        "name": "dsmil",
+        "i_classifier_param": {
+            "feature_size": 1024,
+            "output_class": 1
         },
-    'b_classifier': dsmil.BClassifier,
-    'b_classifier_param' : {
-        'input_size':1024, 
-        'output_class':1
-    },
-    'param': {
-        'threshold': 0.65
+        "b_classifier_param": {
+            "input_size": 1024,
+            "output_class": 1
+        },
+        "param": {
+            "threshold": 0.65
         }
     },
-    'training' : {
-    'epoch' : 10, 
-    'lr': 0.001, 
-    'weight_decay': 0.005, 
-    'batch_size':1
+    "training": {
+        "epoch": 10,
+        "lr": 0.001,
+        "weight_decay": 0.005,
+        "batch_size": 1
     },
-    cross_val' : True,
-    'cross_val_param': {
-        'k' : 5, 
-        'epoch':20
+    "cross_val": true,
+    "cross_val_param": {
+        "k": 5,
+        "epoch": 20
     }
 }
