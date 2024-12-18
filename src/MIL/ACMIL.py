@@ -307,10 +307,10 @@ class ACMIL_GA(nn.Module):
     # AUXILIARY METHODS
     def calculate_classification_error(self, X, Y):
         Y = Y.float()
-        _,_,_, Y_hat, _ = self.forward(X)
+        _,_,Y_prob, Y_hat, _ = self.forward(X)
         error = 1. - Y_hat.eq(Y).cpu().float().mean().data.item()
 
-        return error, Y_hat
+        return error, Y_hat, [Y_prob[0,1]]
 
     def calculate_objective(self, X, Y):
         Y = Y.long()

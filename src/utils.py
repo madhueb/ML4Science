@@ -12,7 +12,8 @@ from torch.utils.data import DataLoader, Subset
 import pickle
 from scipy import stats
 import numpy as np
-#import seaborn as sns
+from sklearn.metrics import roc_curve
+import matplotlib.pyplot as plt#import seaborn as sns
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
     model.train()
@@ -30,7 +31,7 @@ def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=Tr
         # calculate loss and metrics
         loss, _ = model.calculate_objective(data, bag_label)
         train_loss += loss.item()
-        error, _ = model.calculate_classification_error(data, bag_label)
+        error, _, _ = model.calculate_classification_error(data, bag_label)
         train_error += error
         # backward pass
         loss.backward()
@@ -44,11 +45,12 @@ def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=Tr
     if print_results:
         print('Epoch: {}, Loss: {:.4f}, Train error: {:.4f}'.format(epoch, train_loss, train_error))
 
-def test(test_loader,y_test,model,print_results=True):
+def test(test_loader,y_test,model,print_results=False):
     model.eval()
     test_loss = 0.
     test_error = 0.
     y_pred =[]
+    y_probs=[]
     with torch.no_grad():
         for batch_idx, (data, label) in enumerate(test_loader):
             bag_label = label[0]
@@ -56,9 +58,10 @@ def test(test_loader,y_test,model,print_results=True):
                 data, bag_label = data.cuda(), bag_label.cuda()
             loss, _ = model.calculate_objective(data, bag_label)
             test_loss += loss.item()
-            error, predicted_label = model.calculate_classification_error(data, bag_label)
+            error, predicted_label, y_prob = model.calculate_classification_error(data, bag_label)
             test_error += error
             y_pred.append(predicted_label.cpu().numpy().item())
+            y_probs.append(y_prob[0])
 
             #print('Predicted label: {}, True label: {}'.format(predicted_label.item(), bag_label))
     test_error /= len(test_loader)
@@ -68,6 +71,7 @@ def test(test_loader,y_test,model,print_results=True):
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
+    fpr, tpr, thresholds = roc_curve(y_test, y_probs)
     
     
     if print_results:
@@ -77,7 +81,7 @@ def test(test_loader,y_test,model,print_results=True):
         print('Precision :', precision)
         print('Recall :', recall)      
     else:
-        return test_error, f1, accuracy, precision, recall
+        return test_error, f1, accuracy, precision, recall, fpr, tpr
 
 
 
@@ -104,7 +108,7 @@ def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001
             train(train_loader, epoch, model, lr, weight_decay)
 
         print(f'Evaluating Fold {fold + 1}')
-        test_error, f1, accuracy, precision, recall = test(val_loader, y_val, model, print_results=False)
+        test_error, f1, accuracy, precision, recall, _, _ = test(val_loader, y_val, model, print_results=False)
         fold_results.append((test_error, f1, accuracy, precision, recall))
      
     errors = [ r[0] for r in fold_results]

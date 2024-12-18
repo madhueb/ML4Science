@@ -103,4 +103,4 @@ class MILNet(nn.Module):
         
         class_pred = (prediction >= self.threshold).int()
         error = torch.mean((class_pred!= labels).float())
-        return error, class_pred
+        return error, class_pred, prediction

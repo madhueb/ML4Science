@@ -132,10 +132,10 @@ class VarMIL( nn.Module):
         
     def calculate_classification_error(self, X, Y):
             Y = Y.float()
-            _, Y_hat, _ = self.forward(X)
+            Y_prob, Y_hat, _ = self.forward(X)
             error = 1. - Y_hat.eq(Y).cpu().float().mean().data.item()
 
-            return error, Y_hat
+            return error, Y_hat, Y_prob
 
     def calculate_objective(self, X, Y):
         Y = Y.float()

@@ -105,10 +105,10 @@ class Attention(nn.Module):
     # AUXILIARY METHODS
     def calculate_classification_error(self, X, Y):
         Y = Y.float()
-        _, Y_hat, _ = self.forward(X)
+        Y_prob, Y_hat, _ = self.forward(X)
         error = 1. - Y_hat.eq(Y).cpu().float().mean().data.item()
 
-        return error, Y_hat
+        return error, Y_hat, Y_prob
 
     def calculate_objective(self, X, Y):
         Y = Y.float()
@@ -148,10 +148,10 @@ class GatedAttention(nn.Module):
     # AUXILIARY METHODS
     def calculate_classification_error(self, X, Y):
         Y = Y.float()
-        _, Y_hat, _ = self.forward(X)
+        Y_prob, Y_hat, _ = self.forward(X)
         error = 1. - Y_hat.eq(Y).cpu().float().mean().item()
 
-        return error, Y_hat
+        return error, Y_hat, Y_prob
 
     def calculate_objective(self, X, Y):
         Y = Y.float()
@@ -183,10 +183,10 @@ class Emb_mean(nn.Module):
     # AUXILIARY METHODS
     def calculate_classification_error(self, X, Y):
         Y = Y.float()
-        _, Y_hat = self.forward(X)
+        Y_prob, Y_hat = self.forward(X)
         error = 1. - Y_hat.eq(Y).cpu().float().mean().item()
 
-        return error, Y_hat
+        return error, Y_hat, Y_prob
     
     def calculate_objective(self, X, Y):
         Y = Y.float()
@@ -217,10 +217,10 @@ class Emb_max(nn.Module):
     # AUXILIARY METHODS
     def calculate_classification_error(self, X, Y):
         Y = Y.float()
-        _, Y_hat = self.forward(X)
+        Y_prob, Y_hat = self.forward(X)
         error = 1. - Y_hat.eq(Y).cpu().float().mean().item()
 
-        return error, Y_hat
+        return error, Y_hat, Y_prob
     
     def calculate_objective(self, X, Y):
         Y = Y.float()

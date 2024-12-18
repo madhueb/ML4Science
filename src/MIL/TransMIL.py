@@ -101,9 +101,9 @@ class TransMIL(nn.Module):
         return loss, Y_prob
 
     def calculate_classification_error(self, X, labels):
-        _, _, Y_hat = self.forward(X)
+        _, Y_prob, Y_hat = self.forward(X)
         error = torch.mean((Y_hat != labels).float())
-        return error, Y_hat
+        return error, Y_hat, [Y_prob[0,1]]
 
 
     
