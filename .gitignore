@@ -24,3 +24,6 @@ Thumbs.db
 .vscode/
 data/train_dict.pkl
 data/test_dict.pkl
+
+#json_files 
+json_files/*.json
