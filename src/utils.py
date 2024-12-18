@@ -14,6 +14,7 @@ from scipy import stats
 import numpy as np
 from sklearn.metrics import roc_curve
 import matplotlib.pyplot as plt#import seaborn as sns
+import pandas as pd
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
     model.train()
@@ -131,12 +132,6 @@ def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001
 
 # Hyperparameter_tuning : 
 
-#LIST OF HYPERPARAMETERS : 
-# For ABMIL : hidden_size, dropout
-# For VarMIL: hidden_size, dropout, gated, separate_attn, n_var_pools, act_func
-# For CLAM : hidden_size, dropout, gated, instance_eval, subtyping, bag_weight
-# On training : lr, weight_decay
-
 hyp_ABMIL = {'hidden_size': [512, 1024], 'dropout': [0.1, 0.2, 0.3], 'lr': [0.001, 0.01], 'weight_decay': [0.0005, 0.001]}
 
 def generate_hyperparameter_combinations(hyperparameters):
@@ -179,13 +174,9 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
             best_hyperparameters = hyperparameter
     print('Best hyperparameters:', best_hyperparameters, 'Best error:', best_error, 'Best f1:', best_f1)
 
-
-def load_data(file_path): 
-    with open(file_path, 'rb') as f:
-        dict = pickle.load(f)
-    return dict
         
     
 
 def neg_log_bernouilli(Y, pred_one): 
     return -1. * (Y * torch.log(pred_one) + (1. - Y) * torch.log(1-pred_one))
+
