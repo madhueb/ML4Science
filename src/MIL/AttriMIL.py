@@ -17,16 +17,16 @@ class AttriMIL(nn.Module):
     '''
     Multi-Branch ABMIL with constraints
     '''
-    def __init__(self, n_classes=2, dim=1024):
+    def __init__(self, n_classes=2, embed_size=1024):
         super().__init__()
-        self.adaptor = nn.Sequential(nn.Linear(dim, dim//2),
+        self.adaptor = nn.Sequential(nn.Linear(embed_size, embed_size//2),
                                      nn.ReLU(),
-                                     nn.Linear(dim // 2 , dim))
+                                     nn.Linear(embed_size // 2 , embed_size))
         
         attention = []
-        classifer = [nn.Linear(dim, 1) for i in range(n_classes)]
+        classifer = [nn.Linear(embed_size, 1) for i in range(n_classes)]
         for i in range(n_classes):
-            attention.append(get_attn_module(embed_size=dim, hidden_size=dim//2, att_branches=1))
+            attention.append(get_attn_module(embed_size=embed_size, hidden_size=embed_size//2, att_branches=1))
         self.attention_nets = nn.ModuleList(attention)
         self.classifiers = nn.ModuleList(classifer)
         self.n_classes = n_classes

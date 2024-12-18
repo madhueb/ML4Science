@@ -59,9 +59,9 @@ class DimReduction(nn.Module):
         return x
     
 class ACMIL_MHA(nn.Module):
-    def __init__(self, embed_dim,hidden_size,n_classes, n_token=1, n_masked_patch=0, mask_drop=0):
+    def __init__(self, embed_size,hidden_size,n_classes, n_token=1, n_masked_patch=0, mask_drop=0):
         super(ACMIL_MHA, self).__init__()
-        self.dimreduction = DimReduction(embed_dim, hidden_size)
+        self.dimreduction = DimReduction(embed_size, hidden_size)
         self.sub_attention = nn.ModuleList()
         for i in range(n_token):
             self.sub_attention.append(MutiHeadAttention(hidden_size, 8, n_masked_patch=n_masked_patch, mask_drop=mask_drop))
@@ -228,11 +228,11 @@ class MutiHeadAttention_modify(nn.Module):
 
 
 class ACMIL_GA(nn.Module):
-    def __init__(self, embed_dim,hidden_size,n_classes, D=128, droprate=0, n_token=1, n_masked_patch=0, mask_drop=0,loss_fn = nn.CrossEntropyLoss()):
+    def __init__(self, embed_size,hidden_size,n_classes, D=128, droprate=0, n_token=1, n_masked_patch=0, mask_drop=0,loss_fn = nn.CrossEntropyLoss()):
         super(ACMIL_GA, self).__init__()
         
         self.loss_fn = loss_fn
-        self.dimreduction = DimReduction(embed_dim, hidden_size)
+        self.dimreduction = DimReduction(embed_size, hidden_size)
         
         self.attention = get_attn_module(hidden_size, D, att_branches=n_token,gated=True)
        
