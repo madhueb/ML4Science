@@ -4,7 +4,7 @@
     "model": {
         "name": "TransMIL",
         "param": {
-            "n_classes":1
+            "n_classes":2
             }
         },
     "cross_val" : true,
