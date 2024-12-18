@@ -2,8 +2,8 @@ import urllib.request
 import argparse
 from tqdm import tqdm
 import zipfile
-import shutil
 import os
+
 
 
 class DownloadProgressBar(tqdm):

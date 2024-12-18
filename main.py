@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from src.run_fct import *
+import json
 
 if __name__=="__main__":
 
@@ -28,6 +29,6 @@ if __name__=="__main__":
     elif args.dataset in ['Fox','Elephant','Tiger','musk1','musk2']:
         data = run_mil_dataset(model_config,args.dataset)
     elif args.dataset == 'C16':
-        data = run_C16(model_config)
+        data = run_c16(model_config)
 
 

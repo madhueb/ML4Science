@@ -129,6 +129,44 @@ def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001
 
     return fold_results
 
+def k_fold_cross_validation_c16(train_cross_val,val_cross_val,y_tests, model_class, k=5, epochs=20, lr=0.001, weight_decay=0.0005, batch_size=1):
+    kf = KFold(n_splits=k, shuffle=True, random_state=42)
+    fold_results = []
+ 
+
+    for fold in range(k):
+        print(f'Fold {fold + 1}/{k}')
+        train_loader = train_cross_val[fold]
+        val_loader = val_cross_val[fold]
+
+        # extract labels for validation set
+        y_val = y_tests[fold]
+
+        model = model_class
+        for epoch in range(1, epochs + 1):
+            train(train_loader, epoch, model, lr, weight_decay)
+
+        print(f'Evaluating Fold {fold + 1}')
+        test_error, f1, accuracy, precision, recall = test(val_loader, y_val, model, print_results=False)
+        fold_results.append((test_error, f1, accuracy, precision, recall))
+     
+    errors = [r[0].cpu().numpy() if isinstance(r[0], torch.Tensor) else r[0] for r in fold_results]
+    f1_scores = [r[1].cpu().numpy() if isinstance(r[1], torch.Tensor) else r[1] for r in fold_results]
+    accuracies = [r[2].cpu().numpy() if isinstance(r[1], torch.Tensor) else r[2] for r in fold_results]
+    precisions = [r[3].cpu().numpy() if isinstance(r[1], torch.Tensor) else r[3] for r in fold_results]
+    recalls = [r[4].cpu().numpy() if isinstance(r[1], torch.Tensor) else r[4] for r in fold_results]
+
+    print(f'\nK-Fold Cross-Validation Results:')
+    print(f'Average Test Error: {np.mean(errors):.4f} +/- {stats.sem(errors):.4f}')
+    print(f'Average F1 Score: {np.mean(f1_scores):.4f} +/- {stats.sem(f1_scores):.4f}')
+    print(f'Average Accuracy: {np.mean(accuracies):.4f} +/- {stats.sem(accuracies):.4f}')
+    print(f'Average Precision: {np.mean(precisions):.4f} +/- {stats.sem(precisions):.4f}')
+    print(f'Average Recall: {np.mean(recalls):.4f} +/- {stats.sem(recalls):.4f}')
+
+
+
+    return fold_results
+
 
 # Hyperparameter_tuning : 
 

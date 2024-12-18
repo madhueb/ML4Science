@@ -89,6 +89,49 @@ def get_mil_data(dataset_name):
 
     return data
 
+def get_c16_data():
+    normal_paths = pd.read_csv('datasets/Camelyon16/0-normal.csv')
+    tumor_paths = pd.read_csv('datasets/Camelyon16/1-tumor.csv')
+
+    list_test = [(path[0],path[1]) for path in normal_paths.values if 'test' in path[0]]+ [(path[0],path[1]) for path in tumor_paths.values if 'test' in path[0]]
+    list_train = [(path[0],path[1]) for path in normal_paths.values if not 'test' in path[0]]+ [(path[0],path[1]) for path in tumor_paths.values if not 'test' in path[0]]        
+
+    train_cross_val = []
+    val_cross_val = []
+    y_tests =[]
+    nb_train = len(list_train)
+    size_fold = nb_train//5
+    for i in range(5):
+        print("Fold ", i)
+        train_subset = list_train[:i*size_fold] + list_train[(i+1)*size_fold:]
+        val_subset = list_train[i*size_fold:(i+1)*size_fold]
+        y_test = [item[1] for item in val_subset]
+        train_loader = torch.utils.data.DataLoader(
+        dataset=train_subset,               
+        batch_size=1,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=fn_collate
+        )
+        val_loader = torch.utils.data.DataLoader(
+        dataset=val_subset,               
+        batch_size=1,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=fn_collate
+        )
+        train_cross_val.append(train_loader)
+        val_cross_val.append(val_loader)
+        y_tests.append(y_test)
+    return list_train,list_test,train_cross_val,val_cross_val,y_test
+
+def fn_collate(batch):
+        features =[torch.tensor(pd.read_csv(item[0]).values,dtype = torch.float32).to('cpu') for item in batch]
+        labels = [torch.tensor(item[1]).to('cpu') for item in batch]
+        return features[0], labels
+
 # FUNCTION TO RUN #########################################
 
 def run_TCGA(json):
@@ -220,5 +263,65 @@ def run_mil_dataset(json,dataset):
         name = model['name']
         df.to_csv(f'csv_files/{dataset}/{name}.csv',index=False)
 
-#def run_c16(json):
+def run_c16(json):
+    
+    list_train,list_test,train_cross_val,val_cross_val,y_test = get_c16_data()
+    
+    #Change the embedding size of the model if needed
+    json['model']['param']['embed_size'] = 512
+
+    json['cross_val']=False
+
+    if json['model']['name'] == 'dsmil':
+        json['model']['i_classifier_param']['feature_size'] = 512
+        json['model']['b_classifier_param']['input_size'] = 512
+
+    #create model 
+    model = json['model']
+    model_class = get_class(model['name'])
+    if model['name'] == 'dsmil': 
+        i_classifier = dsmil.IClassifier( **{key: value for key, value in model['i_classifier_param'].items() 
+                                       if key in dsmil.IClassifier.__init__.__code__.co_varnames})
+        b_classifier = dsmil.BClassifier( **{key: value for key, value in model['b_classifier_param'].items() 
+                                       if key in dsmil.BClassifier.__init__.__code__.co_varnames})
+        model_class = model_class(i_classifier=i_classifier,
+                                     b_classifier=b_classifier,
+                                   **{key: value for key, value in model['param'].items() 
+                                       if key in model_class.__init__.__code__.co_varnames})
+
+    else : 
+        model_class = model_class( **{key: value for key, value in model['param'].items() 
+                                       if key in model_class.__init__.__code__.co_varnames})
+        
+
+    # cross_validation
+    if (json['cross_val'] == True): 
+        cross_param = json['cross_val_param']
+        k= cross_param['k']
+        epochs = cross_param['epoch']
+        k_fold_cross_validation_c16(train_cross_val,val_cross_val,y_test, model_class,  k, epochs)
+
+
+    else : 
+        train_param = json['training']
+        epoch = train_param['epoch']
+        lr = train_param['lr']
+        weight_decay=train_param['weight_decay']
+        batch_size = train_param['batch_size']
+
+        print('----------Start Training----------')
+        train_loader = torch.utils.data.DataLoader(dataset=list_train,batch_size=batch_size,shuffle=True,collate_fn=fn_collate)
+        test_loader = torch.utils.data.DataLoader(dataset=list_test,batch_size=batch_size,shuffle=True,collate_fn=fn_collate)
+
+        train(train_loader,epoch,model_class,lr, weight_decay,print_results=False)
+        
+        print('----------Start Testing----------')
+        _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class)
+
+        df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
+        name = model['name']
+        df.to_csv(f'csv_files/C16/{name}.csv',index=False)
+
+
+
 
