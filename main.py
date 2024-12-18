@@ -16,6 +16,7 @@ from src.MIL.ACMIL import *
 from src.MIL.AttriMIL import *
 #import src.MIL.DeepGraphConv as dgc
 from src.utils import *
+import pandas as pd
 
 def get_class(model_name):
     if model_name == 'dsmil':
@@ -26,7 +27,7 @@ def get_class(model_name):
         return Emb_mean
     elif model_name == 'Attention':
         return Attention
-    elif model_name == 'Attention gated':
+    elif model_name == 'GatedAttention':
         return GatedAttention
     elif model_name == 'VarMIL':
         return VarMIL
@@ -101,7 +102,11 @@ def pipeline_mil(json):
         train(train_loader,epoch,model_class,lr, weight_decay,print_results=False)
         
         print('----------Start Testing----------')
-        test(test_loader,y_test,model_class)
+        _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class)
+
+        df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
+        name = model['name']
+        df.to_csv(f'{name}.csv',index=False)
 
         
         
