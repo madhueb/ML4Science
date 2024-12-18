@@ -85,10 +85,8 @@ class TransMIL(nn.Module):
 
         # Predict
         logits = self._fc2(h)  # [B, n_classes]
-        #Y_prob = F.softmax(logits, dim=1)
-        Y_prob = torch.sigmoid(logits)
+        Y_prob = F.softmax(logits, dim=1)
         Y_hat = torch.argmax(logits, dim=1)
-        #print(f"logits : {logits}, y_prob : {Y_prob}, y_hat : {Y_hat}")
         return logits, Y_prob, Y_hat
 
 
@@ -97,7 +95,7 @@ class TransMIL(nn.Module):
         Y = Y.float()
         logits, Y_prob, _ = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        loss = neg_log_bernouilli(Y, Y_prob)
+        loss = neg_log_bernouilli(Y, Y_prob[0,1])
         
         #we don't care about the second argument returned
         return loss, Y_prob
