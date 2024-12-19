@@ -3,8 +3,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.data import Data
+from src.utils import *
+"""
+File containing the implementation of the PathGCN model, this model was not benchmarked in the paper as we didn't go through with its analysis  but is included because we believe it could be useful for future work
+"""
 
 class PatchGCN(nn.Module):
+    """ 
+    PatchGCN model implementation
+    Args:
+        in_channels (int): Number of input channels
+        hidden_channels (int): Number of hidden channels
+        out_channels (int): Number of output channels
+        num_layers (int): Number of layers, default is 4
+        dropout (float): Dropout rate, default is 0.5
+    """
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers=4, dropout=0.5):
         super(PatchGCN, self).__init__()
 
@@ -43,7 +56,7 @@ class PatchGCN(nn.Module):
         Y = Y.float()
         _,Y_prob, _, A = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))  # negative log bernoulli
+        neg_log_likelihood = neg_log_bernouilli(Y,Y_prob)
 
         return neg_log_likelihood, A
 

@@ -6,18 +6,23 @@ import pdb
 
 from src.MIL.ABMIL import get_attn_module
 
-"""
-args:
-    gated: whether to use gated attention network
-    size_arg: config for network size
-    dropout:value of dropout
-    k_sample: number of positive/neg patches to sample for instance-level training
-    n_classes: number of classes 
-    instance_loss_fn: loss function to supervise instance-level training
-    subtyping: whether it's a subtyping problem
-"""
+""" File containing the implementation of the CLAM model """
 
 class CLAM_SB(nn.Module):
+    """
+    Implementation of the CLAM model
+    Args:
+        gated (bool): Whether to use the gated attention mechanism, default is True
+        size_arg (str): Size of the model, either 'small' or 'big', default is 'small'
+        dropout (float): Dropout rate, default is 0.
+        k_sample (int): Number of samples to use for the instance-level evaluation, default is 8
+        n_classes (int): Number of classes, default is 2
+        instance_loss_fn (nn.Module): Loss function to use for the instance-level evaluation, default is nn.CrossEntropyLoss()
+        subtyping (bool): Whether to use the subtyping branch, default is False
+        embed_size (int): Size of the embeddings, default is 1024
+        bag_weight (float): Weight of the bag-level loss, default is 0.5
+    
+    """
     def __init__(self, gated = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_size=1024,bag_weight=0.5):
         super().__init__()

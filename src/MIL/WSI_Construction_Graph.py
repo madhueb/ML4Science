@@ -35,6 +35,9 @@ from itertools import chain
 #from utils.utils import *
 #from datasets.wsi_dataset import Wsi_Region
 
+"""
+Draft file for constructing a graph from a WSI, used in DeepGraphConv, has not been used in the benchmark but can be of interest for future work"""
+
 class Hnsw:
     def __init__(self, space='cosinesimil', index_params=None,
                  query_params=None, print_progress=True):

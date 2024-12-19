@@ -1,52 +1,27 @@
-"""
-Variance Pooling + Attention based multiple instance learning architecture.
-"""
 import torch
 import torch.nn as nn
 
-from numbers import Number
 import numpy as np
 import torch.nn.functional as F
-
-
-
 from src.MIL.ABMIL import get_attn_module
+from src.utils import neg_log_bernouilli
 
-
+"""
+File containing the implementation of the VarMIL model
+"""
 
 class VarMIL( nn.Module):
     """
-    Attention mean  and variance pooling architecture.
-
-    Parameters
-    ----------
-    embed_size: int
-        Dimension of the encoder features. This is either the dimension output by the instance encoder (if there is one) or it is the dimension of the input feature (if there is no encoder).
-
-    hidden_size: int, None
-        Number of latent dimension for the attention layer. If None, will default to (n_in + 1) // 2.
-
-    gated: bool
-        Use the gated attention mechanism.
-
-    separate_attn: bool
-        WHether or not we want to use separate attention branches for the mean and variance pooling.
-
-    n_var_pools: int
-        Number of variance pooling projections.
-
-    act_func: str
-        The activation function to apply to variance pooling. Must be one of ['sqrt', 'log', 'sigmoid'].
-
-    log_eps: float
-        Epsilon value for log(epsilon + ) var pool activation function.
-
-    dropout: bool, float
-        Whether or not to use dropout in the attention mechanism. If True, will default to p=0.25.
-
-    References
-    ----------
-    Ilse, M., Tomczak, J. and Welling, M., 2018, July. Attention-based deep multiple instance learning. In International conference on machine learning (pp. 2127-2136). PMLR.
+    Implementation of the VarMIL model
+    Args: 
+        embed_size (int): Dimension of the encoder features, default is 1024
+        hidden_size (int): Dimension of the hidden layer, default is 128
+        gated (bool): If True, use the gated attention mechanism, default is True
+        separate_attn (bool): If True, use separate attention mechanisms for mean and variance, default is False
+        n_var_pools (int): Number of variance pooling projections, default is 100
+        act_func (str): The activation function to apply to variance pooling, default is 'sqrt'
+        log_eps (float): Epsilon value for log(epsilon + ), default is 0.01
+        dropout (float): Dropout rate, default is 0.0
     """
     def __init__(self, embed_size=1024, 
                  hidden_size=128, gated=True,
@@ -141,35 +116,19 @@ class VarMIL( nn.Module):
         Y = Y.float()
         Y_prob, _, A = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))  # negative log bernoulli
-
-        return neg_log_likelihood, A
+        loss = neg_log_bernouilli(Y, Y_prob)
+        return loss, A
 
 
 
 class VarPool(nn.Module):
     """
-    A variance pooling layer.
-
-    Compute the variance across attended & projected instances
-
-    Parameters
-    ----------
-    embed_size: int
-        Dimension of the encoder features.
-
-    n_var_pools: int
-        Number of variance pooling projections.
-
-    act_func: str
-        The activation function to apply to variance pooling. Must be on of ['sqrt', 'log', 'sigmoid', 'identity'].
-
-    log_eps: float
-        Epsilon value for log(epsilon + ).
-
-    apply_attn: bool
-        If True, apply attn to var projection. If False, do not apply attn (Mainly for SumMIL)
-
+    Variance pooling layer
+    Args:
+        embed_size (int): Dimension of the encoder features
+        n_var_pools (int): Number of variance pooling projections
+        act_func (str): The activation function to apply to variance pooling, between 'sqrt', 'log', 'sigmoid', 'identity', default is 'sqrt'
+        log_eps (float): Epsilon value for log, default is 0.01
     """
     def __init__(self, embed_size, n_var_pools, act_func='sqrt', log_eps=0.01):
         super().__init__()
@@ -190,31 +149,20 @@ class VarPool(nn.Module):
             torch.normal(mean=torch.zeros(embed_size, n_pools),
                          std=1/np.sqrt(embed_size))
 
-    # def get_projection_vector(self, idx):
-    #     """
-    #     Returns a projection vector
-    #     """
-    #     return self.var_projections.weight.data[idx, :].detach()
 
     def get_proj_attn_weighted_resids_sq(self, bag, attn, return_resids=False):
         """
         Computes the attention weighted squared residuals of each instance to the projection mean.
 
-        Parameters
-        ----------
-        bag: (batch_size, n_instances, instance_dim)
-            The bag features.
+        Args:
+            bag: (batch_size, n_instances, instance_dim)
+                The bag features.
 
-        attn: (batch_size, n_instances, 1)
-            The normalized instance attention scores.
+            attn: (batch_size, n_instances, 1)
+                The normalized instance attention scores.
 
-        Output
-        ------
-        attn_resids_sq: (batch_size, n_instances, n_var_pools)
-            The attention weighted squared residuals.
-
-        if return_resids is True then we also return resids
-
+            return_resids: bool
+                If True, return the residuals as well.
         """
         assert len(bag.shape) == 3, \
             "Be sure to include batch in first dimension"
@@ -239,25 +187,11 @@ class VarPool(nn.Module):
             return attn_resids_sq
 
     def forward(self, bag, attn):
-        """
-        Parameters
-        ----------
-        bag: (batch_size, n_instances, instance_dim)
-            The bag features.
 
-        attn: (batch_size, n_instances, 1)
-            The normalized instance attention scores.
-
-        Output
-        ------
-        var_pool: (batch_size, n_var_pools)
-        """
         attn_resids_sq = self.\
             get_proj_attn_weighted_resids_sq(bag, attn, return_resids=False)
         # (batch_size, n_instances, n_var_pools)
 
-        # computed weighted average -- note this effectively uses
-        # denominator 1/n since the attn sum to one.
         var_pool = (attn_resids_sq).sum(1)
         # (batch_size, n_var_pools)
 

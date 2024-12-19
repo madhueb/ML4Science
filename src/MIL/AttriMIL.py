@@ -11,11 +11,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-    
+"""
+File containing the implementation of the AttriMIL model"""
 
 class AttriMIL(nn.Module): 
     '''
-    Multi-Branch ABMIL with constraints
+    AttriMIL model
+    Args:
+        n_classes (int): Number of classes, default is 2
+        embed_size (int): Size of the input embeddings, default is 1024
     '''
     def __init__(self, n_classes=2, embed_size=1024):
         super().__init__()

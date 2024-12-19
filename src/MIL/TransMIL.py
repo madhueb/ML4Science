@@ -6,7 +6,17 @@ from nystrom_attention import NystromAttention
 import torch.nn.functional as F
 from src.utils import neg_log_bernouilli
 
+
+""" 
+File containing the implementation of the TransMIL model
+"""
 class TransLayer(nn.Module):
+    """
+    Implementation of the Transformer layer
+    Args:
+        norm_layer (nn.Module): Normalization layer to use, default is nn.LayerNorm
+        dim (int): Dimension of the input, default is 512
+    """
 
     def __init__(self, norm_layer=nn.LayerNorm, dim=512):
         super().__init__()
@@ -28,6 +38,11 @@ class TransLayer(nn.Module):
 
 
 class PPEG(nn.Module):
+    """
+    Implementation of the Positional Encoding with Positional Encoding Gradients (PPEG) layer
+    Args:
+        dim (int): Dimension of the input, default is 512
+    """
     def __init__(self, dim=512):
         super(PPEG, self).__init__()
         self.proj = nn.Conv2d(dim, dim, 7, 1, 7//2, groups=dim)
@@ -45,6 +60,12 @@ class PPEG(nn.Module):
 
 
 class TransMIL(nn.Module):
+    """
+    Implementation of the TransMIL model
+    Args:
+        n_classes (int): Number of classes, default is 2
+        embed_size (int): Size of the embeddings, default is 1024
+    """
     def __init__(self, n_classes,embed_size=1024):
         super(TransMIL, self).__init__()
         self.pos_layer = PPEG(dim=512)

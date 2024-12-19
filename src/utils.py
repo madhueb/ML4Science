@@ -1,22 +1,26 @@
 import torch
 from itertools import product
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import confusion_matrix
-from src.MIL.ABMIL import *
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_curve
 from tqdm import tqdm
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Subset
-import pickle
 from scipy import stats
 import numpy as np
-from sklearn.metrics import roc_curve
-import matplotlib.pyplot as plt#import seaborn as sns
-import pandas as pd
+
+
+######################################## FUNCTIONS TO TRAIN AND TEST MODELS ########################################
 
 def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=True):
+    """
+    Train the model for one epoch
+    Args:
+        train_loader (DataLoader): DataLoader for the training set
+        epoch (int): Current epoch number
+        model (nn.Module): Model to train
+        lr (float): Learning rate, default is 0.001
+        weight_decay (float): Weight decay, default is 0.0005
+        print_results (bool): Whether to print the results, default is True
+    """
     model.train()
     train_loss = 0.
     train_error = 0.
@@ -47,6 +51,13 @@ def train(train_loader,epoch,model,lr=0.001,weight_decay=0.0005,print_results=Tr
         print('Epoch: {}, Loss: {:.4f}, Train error: {:.4f}'.format(epoch, train_loss, train_error))
 
 def test(test_loader,y_test,model,print_results=False):
+    """
+    Test the model
+    Args:
+        test_loader (DataLoader): DataLoader for the test set
+        model (nn.Module): Model to test
+        print_results (bool): Whether to print the results, default is False
+    """
     model.eval()
     test_loss = 0.
     test_error = 0.
@@ -87,6 +98,20 @@ def test(test_loader,y_test,model,print_results=False):
 
 
 def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001, weight_decay=0.0005, batch_size=1):
+    """
+    Perform k-fold cross-validation on the train_dataset
+    Args:
+        train_dataset (Dataset) : Dataset to perform cross-validation on
+        model_class (nn.Module): Model to train
+        k (int): Number of folds, default is 5
+        epochs(int): Number of epochs, default is 20
+        lr (float): Learning rate, default is 0.001
+        weight_decay (float): Weight decay, default is 0.0005
+        batch_size (int): Batch size, default is 1
+
+    Prints the average test error, f1 score, accuracy, precision and recall over the k folds
+
+    """
     kf = KFold(n_splits=k, shuffle=True, random_state=42)
     fold_results = []
  
@@ -130,10 +155,23 @@ def k_fold_cross_validation(train_dataset, model_class, k=5, epochs=20, lr=0.001
     return fold_results
 
 def k_fold_cross_validation_c16(train_cross_val,val_cross_val,y_tests, model_class, k=5, epochs=20, lr=0.001, weight_decay=0.0005, batch_size=1):
-    kf = KFold(n_splits=k, shuffle=True, random_state=42)
-    fold_results = []
- 
+    """
+    Perform k-fold cross-validation for the Camelyon16 dataset, where the train and validation sets are already split
+    Args:
+        train_cross_val (list): List of DataLoaders for the training set for each fold
+        val_cross_val (list): List of DataLoaders for the validation set for each fold
+        y_tests (list): List of labels for the validation set
+        model_class (nn.Module): Model to train
+        k (int): Number of folds, default is 5
+        epochs(int): Number of epochs, default is 20
+        lr (float): Learning rate, default is 0.001
+        weight_decay (float): Weight decay, default is 0.0005
+        batch_size (int): Batch size, default is 1
 
+    Prints the average test error, f1 score, accuracy, precision and recall over the k folds
+    """
+    
+    fold_results = []
     for fold in range(k):
         print(f'Fold {fold + 1}/{k}')
         train_loader = train_cross_val[fold]
@@ -168,23 +206,39 @@ def k_fold_cross_validation_c16(train_cross_val,val_cross_val,y_tests, model_cla
     return fold_results
 
 
-# Hyperparameter_tuning : 
-
-hyp_ABMIL = {'hidden_size': [512, 1024], 'dropout': [0.1, 0.2, 0.3], 'lr': [0.001, 0.01], 'weight_decay': [0.0005, 0.001]}
+######################################## FUNCTIONS FOR HYPERPARAMETER TUNING ######################################## 
 
 def generate_hyperparameter_combinations(hyperparameters):
+    """
+    Generate all possible combinations of hyperparameters
+    Args:
+        hyperparameters (dict): Dictionary containing hyperparameters and their possible values
+    Returns:
+        List of dictionaries, each containing a combination of hyperparameters
+    """
 
     keys = list(hyperparameters.keys())
     values = list(hyperparameters.values())
     
-    # Générer les combinaisons
+    # Create all possible combinations of hyperparameters
     combinations = product(*values)
     
-    # Transformer les combinaisons en une liste de dictionnaires
+    # Combine all combinations into a list of dictionaries
     result = [dict(zip(keys, combination)) for combination in combinations]
     return result
 
 def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_class):
+    """
+    Perform hyperparameter tuning using grid search for f1 score
+    Args:
+        train_loader (DataLoader): DataLoader for the training set
+        test_loader (DataLoader): DataLoader for the test set
+        y_test (list): List of labels for the test set
+        hyperparameters (dict): Dictionary containing hyperparameters and their possible values
+        model_class (nn.Module): Model to train
+
+    Prints the best hyperparameters and the corresponding test error and f1 score
+    """
     best_error = 1
     best_f1 =0
     best_hyperparameters = {}
@@ -212,9 +266,9 @@ def hyperparam_tuning(train_loader, test_loader, y_test,hyperparameters,model_cl
             best_hyperparameters = hyperparameter
     print('Best hyperparameters:', best_hyperparameters, 'Best error:', best_error, 'Best f1:', best_f1)
 
-        
-    
-
+######################################## FUNCTIONS FOR LOSS FUNCTIONS ########################################
 def neg_log_bernouilli(Y, pred_one): 
     return -1. * (Y * torch.log(pred_one) + (1. - Y) * torch.log(1-pred_one))
+
+
 

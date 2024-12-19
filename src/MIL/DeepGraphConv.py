@@ -1,7 +1,6 @@
 #from os.path import join
 #from collections import OrderedDict
 
-#import pdb
 import numpy as np
 
 import torch
@@ -17,11 +16,27 @@ from src.MIL.ABMIL import Att_Net_Gated_Dual
 from src.MIL.WSI_Construction_Graph import Hnsw
 from itertools import chain
 from src.utils import *
-#from .patchgcn_utils.model_utils import *
 
+"""
+File containing the implementation of the DeepGraphConv model, this model was not benchmarked in the paper as we didn't go through with its analysis  but is included because we believe it could be useful for future work
+"""
 
 
 class DeepGraphConv_Surv(torch.nn.Module):
+    """
+    Implementation of the DeepGraphConv model
+    Args:
+        edge_agg (str): Type of edge aggregation to use, either 'spatial' or 'latent', default is 'latent'
+        resample (float): Dropout rate, default is 0
+        ndim (int): Number of input features, default is 1024
+        hidden_dim (int): Number of hidden units, default is 256
+        linear_dim (int): Number of linear units, default is 256
+        pool (bool): Whether to use pooling, default is False
+        use_edges (bool): Whether to use edges, default is False
+        dropout (float): Dropout rate, default is 0.25
+        n_classes (int): Number of classes, default is 4
+        radius (int): Radius for the HNSW graph, default is 8
+    """
     def __init__(self, edge_agg='latent', resample=0, ndim=1024, hidden_dim=256, 
         linear_dim=256, pool=False, use_edges=False, dropout=0.25, n_classes=4, radius=8):
         super(DeepGraphConv_Surv, self).__init__()

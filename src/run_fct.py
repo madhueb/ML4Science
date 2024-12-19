@@ -1,8 +1,8 @@
 import pickle
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import TensorDataset, DataLoader
-from src.utils import * 
 from sklearn.model_selection import train_test_split   
 
 from src.MIL.ABMIL import *
@@ -13,10 +13,17 @@ import src.MIL.dsmil as dsmil
 from src.MIL.ACMIL import *
 from src.MIL.AttriMIL import *
 from src.utils import *
-import pandas as pd
+
 
 
 def get_class(model_name):
+    """
+    Function to get the class of the model
+    Args:
+        model_name (str): Name of the model
+    Returns:
+        class (class): Class of the model
+    """
     if model_name == 'dsmil':
         return dsmil.MILNet
     elif model_name == 'Emb_max':
@@ -51,7 +58,15 @@ def load_data(file_path):
     return dict
 
 def get_mil_data(dataset_name):
+    """
+    Load data for MIL datasets
+    Args:
+        dataset_name (str): Name of the dataset
+    Returns:
+        data (list): List of tuples (embedding, label)
+    """
 
+    #Get the path to the dataset
     if dataset_name not in ['Fox','Elephant','Tiger','musk1','musk2']:
         raise ValueError("Name of the dataset not recognized")
     if dataset_name =='Elephant' or dataset_name == 'Fox' or dataset_name == 'Tiger' :
@@ -59,11 +74,10 @@ def get_mil_data(dataset_name):
     else :
         file_path = 'datasets/mil_dataset/Musk/'+dataset_name +'norm.svm'
 
+    #Load the data
     df = pd.read_csv(file_path)
     df = pd.DataFrame(df)
     df = df[df.columns[0]]
-
-    
     data_list = []
     for i in range(0, df.shape[0]):  
         data = str(df.iloc[i]).split(' ')
@@ -77,35 +91,48 @@ def get_mil_data(dataset_name):
             feature_data = feature.split(':')
             if len(feature_data) == 2:
                 feature_vector[i] = feature_data[1]
-        data_list.append([idi, idb, idc, feature_vector])
+        data_list.append([idi, idb, idc, feature_vector])#id of the instance, id of the bag, id of the class, feature vector
 
-    data =[]
+    data =[] #contains the list of bags
     num_bags = len(set([x[1] for x in data_list]))
     for i in range(num_bags):
         class_bag = [x[2] for x in data_list if x[1] == i][0]
         class_bag = 1 if class_bag == 1 else 0
-        embedding = torch.tensor([x[3] for x in data_list if x[1] == i], dtype=torch.float32)
+        embedding = torch.tensor([x[3] for x in data_list if x[1] == i], dtype=torch.float32) #embedding of the bag size (nb_instances, nb_features)
         data.append((embedding,torch.tensor(class_bag)))
 
     return data
 
-def get_c16_data():
+def get_c16_data(k=5):
+    """
+    Load data for Camelyon16 dataset and create the dataloaders for cross-validation
+    Args:
+        k (int): Number of folds for cross-validation
+    Returns:
+        list_train (list): List of tuples (path, label) for training
+        list_test (list): List of tuples (path, label) for testing
+        train_cross_val (list): List of training dataloaders for cross-validation
+        val_cross_val (list): List of validation dataloaders for cross-validation
+        y_test (list): List of labels for testing
+    """
     normal_paths = pd.read_csv('datasets/Camelyon16/0-normal.csv')
     tumor_paths = pd.read_csv('datasets/Camelyon16/1-tumor.csv')
 
     list_test = [(path[0],path[1]) for path in normal_paths.values if 'test' in path[0]]+ [(path[0],path[1]) for path in tumor_paths.values if 'test' in path[0]]
     list_train = [(path[0],path[1]) for path in normal_paths.values if not 'test' in path[0]]+ [(path[0],path[1]) for path in tumor_paths.values if not 'test' in path[0]]        
 
+    #Create the dataloaders for cross-validation
     train_cross_val = []
     val_cross_val = []
     y_tests =[]
     nb_train = len(list_train)
-    size_fold = nb_train//5
-    for i in range(5):
-        print("Fold ", i)
+    size_fold = nb_train//k
+    for i in range(k):
+
         train_subset = list_train[:i*size_fold] + list_train[(i+1)*size_fold:]
         val_subset = list_train[i*size_fold:(i+1)*size_fold]
         y_test = [item[1] for item in val_subset]
+        #Create the dataloaders
         train_loader = torch.utils.data.DataLoader(
         dataset=train_subset,               
         batch_size=1,
@@ -128,13 +155,21 @@ def get_c16_data():
     return list_train,list_test,train_cross_val,val_cross_val,y_test
 
 def fn_collate(batch):
-        features =[torch.tensor(pd.read_csv(item[0]).values,dtype = torch.float32).to('cpu') for item in batch]
-        labels = [torch.tensor(item[1]).to('cpu') for item in batch]
-        return features[0], labels
+    """
+    Function to collate the data for the dataloaders
+    """
+    features =[torch.tensor(pd.read_csv(item[0]).values,dtype = torch.float32).to('cpu') for item in batch]
+    labels = [torch.tensor(item[1]).to('cpu') for item in batch]
+    return features[0], labels
 
 # FUNCTION TO RUN #########################################
 
 def run_TCGA(json):
+    """
+    Function to run the model on TCGA dataset
+    Args:
+        json (dict): Configuration file
+    """
     #load data 
     train_dict = load_data('datasets/TCGA/train_dict.pkl')
     test_dict = load_data('datasets/TCGA/test_dict.pkl')
@@ -149,6 +184,14 @@ def run_TCGA(json):
                                torch.tensor(y_train, dtype=torch.int))
     test_dataset = TensorDataset(torch.tensor(X_test, dtype=torch.float32), 
                               torch.tensor(y_test, dtype=torch.int))
+    
+    #Change the embedding size of the model if needed
+    json['model']['param']['embed_size'] = X_train[0].shape[1]
+    if json['model']['name'] == 'dsmil':
+        json['model']['i_classifier_param']['feature_size'] = X_train[0].shape[1]
+        json['model']['b_classifier_param']['input_size'] = X_train[0].shape[1]
+
+
 
 
     #create model 
@@ -193,13 +236,24 @@ def run_TCGA(json):
         train(train_loader,epoch,model_class,lr, weight_decay,print_results=False)
         
         print('----------Start Testing----------')
-        _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class)
+        if json['ROC'] == True:
+            _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class,print_results=False)
+            #Save the results for the ROC curve in a csv file
+            df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
+            name = model['name']
+            df.to_csv(f'csv_files/TCGA/{name}.csv',index=False)
+        else:
+            test(test_loader,y_test,model_class,print_results=True)
 
-        df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
-        name = model['name']
-        df.to_csv(f'csv_files/TCGA/{name}.csv',index=False)
+        
 
-def run_mil_dataset(json,dataset): 
+def run_mil_dataset(json,dataset):
+    """
+    Function to run the model on MIL benchmark datasets
+    Args:
+        json (dict): Configuration file
+        dataset (str): Name of the dataset
+    """
 
     data = get_mil_data(dataset)
     X = [x[0] for x in data]
@@ -210,8 +264,6 @@ def run_mil_dataset(json,dataset):
 
     #Change the embedding size of the model if needed
     json['model']['param']['embed_size'] = X_train[0].shape[1]
-
-    json['cross_val']=False
 
     if json['model']['name'] == 'dsmil':
         json['model']['i_classifier_param']['feature_size'] = X_train[0].shape[1]
@@ -257,21 +309,26 @@ def run_mil_dataset(json,dataset):
         train(train_loader,epoch,model_class,lr, weight_decay,print_results=False)
         
         print('----------Start Testing----------')
-        _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class)
-
-        df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
-        name = model['name']
-        df.to_csv(f'csv_files/{dataset}/{name}.csv',index=False)
+        if json['ROC'] == True:
+            _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class,print_results=False)
+            #Save the results for the ROC curve in a csv file
+            df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
+            name = model['name']
+            df.to_csv(f'csv_files/TCGA/{name}.csv',index=False)
+        else:
+            test(test_loader,y_test,model_class,print_results=True)
 
 def run_c16(json):
+    """
+    Function to run the model on Camelyon16 dataset
+    Args:
+        json (dict): Configuration file
+    """
     
-    list_train,list_test,train_cross_val,val_cross_val,y_test = get_c16_data()
+    list_train,list_test,train_cross_val,val_cross_val,y_test = get_c16_data(cross_param['k'])
     
     #Change the embedding size of the model if needed
     json['model']['param']['embed_size'] = 512
-
-    json['cross_val']=False
-
     if json['model']['name'] == 'dsmil':
         json['model']['i_classifier_param']['feature_size'] = 512
         json['model']['b_classifier_param']['input_size'] = 512
@@ -316,11 +373,14 @@ def run_c16(json):
         train(train_loader,epoch,model_class,lr, weight_decay,print_results=False)
         
         print('----------Start Testing----------')
-        _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class)
-
-        df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
-        name = model['name']
-        df.to_csv(f'csv_files/C16/{name}.csv',index=False)
+        if json['ROC'] == True:
+            _, _, _, _,_, fpr, tpr = test(test_loader,y_test,model_class,print_results=False)
+            #Save the results for the ROC curve in a csv file
+            df = pd.DataFrame({'fpr': fpr, 'tpr': tpr})
+            name = model['name']
+            df.to_csv(f'csv_files/TCGA/{name}.csv',index=False)
+        else:
+            test(test_loader,y_test,model_class,print_results=True)
 
 
 

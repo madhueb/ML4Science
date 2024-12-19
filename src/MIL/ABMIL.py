@@ -1,9 +1,22 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from src.utils import *
+
+"""
+File containing the implementation of the Attention Based MIL models and some baselines (Emb_mean, Emb_max)
+"""
 
 class Att_net(nn.Module):
-    def __init__(self, embed_size=1024, hidden_size=128, ATTENTION_BRANCHES=1,dropout=0.):
+    """
+    Attention network
+    Args:
+        embed_size (int): Size of the input embeddings, default is 1024
+        hidden_size (int): Size of the hidden layer, default is 512
+        ATTENTION_BRANCHES (int): Number of attention branches, default is 1
+        dropout (float): Dropout rate, default is 0.
+    """
+    def __init__(self, embed_size=1024, hidden_size=512, ATTENTION_BRANCHES=1,dropout=0.):
         super(Att_net, self).__init__()
         self.embed_size = embed_size
         self.hidden_size = hidden_size
@@ -22,6 +35,14 @@ class Att_net(nn.Module):
         return A,x
 
 class Att_Net_Gated_Dual(nn.Module):
+    """
+    Attention network with gated mechanism for dual attention
+    Args:
+        L (int): Size of the input embeddings, default is 1024
+        D (int): Size of the hidden layer, default is 256
+        dropout (bool): Whether to use dropout, default is False
+        n_tasks (int): Number of tasks, default is 1
+    """
 
     def __init__(self, L = 1024, D = 256, dropout = False, n_tasks = 1):
         super(Att_Net_Gated_Dual, self).__init__()
@@ -48,6 +69,14 @@ class Att_Net_Gated_Dual(nn.Module):
         return A, x
 
 class GatedAtt_net(nn.Module):
+    """
+    Gated Attention network
+    Args:
+        embed_size (int): Size of the input embeddings, default is 1024
+        hidden_size (int): Size of the hidden layer, default is 128
+        ATTENTION_BRANCHES (int): Number of attention branches, default is 1
+        dropout (float): Dropout rate, default is 0.
+    """
     def __init__(self, embed_size=1024, hidden_size=128, ATTENTION_BRANCHES=1,dropout=0.):
         super(GatedAtt_net, self).__init__()
         self.embed_size = embed_size
@@ -75,6 +104,14 @@ class GatedAtt_net(nn.Module):
         return A,x
 
 class Attention(nn.Module):
+    """
+    Attention layer
+    Args:
+        embed_size (int): Size of the input embeddings, default is 1024
+        hidden_size (int): Size of the hidden layer, default is 128
+        ATTENTION_BRANCHES (int): Number of attention branches, default is 1
+        dropout (float): Dropout rate, default is 0.
+    """
     def __init__(self, embed_size=1024, hidden_size=128, ATTENTION_BRANCHES=1,dropout=0.):
         super(Attention, self).__init__()
         self.embed_size = embed_size
@@ -114,11 +151,17 @@ class Attention(nn.Module):
         Y = Y.float()
         Y_prob, _, A = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))  # negative log bernoulli
-
-        return neg_log_likelihood, A
+        loss = neg_log_bernouilli(Y, Y_prob)  
+        return loss, A
 
 class GatedAttention(nn.Module):
+    """
+    Gate Attention layer
+    Args:
+        embed_size (int): Size of the input embeddings, default is 1024
+        hidden_size (int): Size of the hidden layer, default is 128
+        ATTENTION_BRANCHES (int): Number of attention branches, default is 1
+        dropout (float): Dropout rate, default is 0."""
     def __init__(self, embed_size=1024, hidden_size=128, ATTENTION_BRANCHES=1,dropout=0.):
         super(GatedAttention, self).__init__()
         self.embed_size = embed_size
@@ -157,18 +200,21 @@ class GatedAttention(nn.Module):
         Y = Y.float()
         Y_prob, _, A = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))  # negative log bernoulli
-
-        return neg_log_likelihood, A
+        loss = neg_log_bernouilli(Y, Y_prob)
+        return loss, A
     
 class Emb_mean(nn.Module):  
-    def __init__(self, embed_size=1024, ATTENTION_BRANCHES=1): 
+    """
+    Embedding mean layer
+    Args:
+        embed_size (int): Size of the input embeddings, default is 1024
+    """
+    def __init__(self, embed_size=1024): 
         super(Emb_mean, self).__init__()  
         self.embed_size = embed_size
-        self.ATTENTION_BRANCHES = ATTENTION_BRANCHES
 
         self.classifier = nn.Sequential(
-            nn.Linear(self.embed_size*self.ATTENTION_BRANCHES, 1),
+            nn.Linear(self.embed_size, 1),
             nn.Sigmoid()
         )
 
@@ -192,17 +238,21 @@ class Emb_mean(nn.Module):
         Y = Y.float()
         Y_prob, _ = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))
-        return neg_log_likelihood, None
+        loss = neg_log_bernouilli(Y, Y_prob)
+        return loss, None
 
-class Emb_max(nn.Module):  
-    def __init__(self, embed_size=1024, ATTENTION_BRANCHES=1): 
+class Emb_max(nn.Module): 
+    """
+    Embedding max layer
+    Args:
+        embed_size (int): Size of the input embeddings, default is 1024
+    """ 
+    def __init__(self, embed_size=1024): 
         super(Emb_max, self).__init__() 
         self.embed_size = embed_size
-        self.ATTENTION_BRANCHES = ATTENTION_BRANCHES
 
         self.classifier = nn.Sequential(
-            nn.Linear(self.embed_size*self.ATTENTION_BRANCHES, 1),
+            nn.Linear(self.embed_size, 1),
             nn.Sigmoid()
         )
 
@@ -226,13 +276,13 @@ class Emb_max(nn.Module):
         Y = Y.float()
         Y_prob, _ = self.forward(X)
         Y_prob = torch.clamp(Y_prob, min=1e-5, max=1. - 1e-5)
-        neg_log_likelihood = -1. * (Y * torch.log(Y_prob) + (1. - Y) * torch.log(1. - Y_prob))
-        return neg_log_likelihood, None
+        loss = neg_log_bernouilli(Y, Y_prob)
+        return loss, None
 
 
 def get_attn_module(embed_size, hidden_size, att_branches, dropout=0., gated=False):
     """
-    Gets the attention module
+    Gets the attention module for other models
     """
     if gated:
         return GatedAtt_net(embed_size = embed_size, hidden_size = hidden_size,ATTENTION_BRANCHES=att_branches,dropout=dropout)

@@ -1,13 +1,22 @@
 import math
-import os
-
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 
 from src.MIL.ABMIL import get_attn_module
 
+"""
+File containing the implementation of the ACMIL model
+"""
+
 class Classifier_1fc(nn.Module):
+    """
+    Classifier with one fully connected layer
+    Args:
+        n_channels (int): Number of input channels
+        n_classes (int): Number of classes
+        droprate (float): Dropout rate, default is 0.
+    """
     def __init__(self, n_channels, n_classes, droprate=0.0):
         super(Classifier_1fc, self).__init__()
         self.fc = nn.Linear(n_channels, n_classes)
@@ -23,6 +32,11 @@ class Classifier_1fc(nn.Module):
         return x
     
 class residual_block(nn.Module):
+    """
+    Residual block
+    Args:
+        nChn (int): Number of input channels, default is 512
+    """
     def __init__(self, nChn=512):
         super(residual_block, self).__init__()
         self.block = nn.Sequential(
@@ -37,6 +51,13 @@ class residual_block(nn.Module):
         return x
     
 class DimReduction(nn.Module):
+    """
+    Dimensionality reduction module
+    Args:
+        n_channels (int): Number of input channels
+        m_dim (int): Dimension of the output, default is 512
+        numLayer_Res (int): Number of residual blocks, default is 0
+    """
     def __init__(self, n_channels, m_dim=512, numLayer_Res=0):
         super(DimReduction, self).__init__()
         self.fc1 = nn.Linear(n_channels, m_dim, bias=False)
@@ -59,6 +80,16 @@ class DimReduction(nn.Module):
         return x
     
 class ACMIL_MHA(nn.Module):
+    """
+    ACMIL model with Multi-Head Attention
+    Args:
+        embed_size (int): Size of the input embeddings
+        hidden_size (int): Size of the hidden layer
+        n_classes (int): Number of classes
+        n_token (int): Number of attention tokens, default is 1
+        n_masked_patch (int): Number of masked patches, default is 0
+        mask_drop (float): Mask drop rate, default is 0
+    """
     def __init__(self, embed_size,hidden_size,n_classes, n_token=1, n_masked_patch=0, mask_drop=0):
         super(ACMIL_MHA, self).__init__()
         self.dimreduction = DimReduction(embed_size, hidden_size)
@@ -99,6 +130,13 @@ class MutiHeadAttention(nn.Module):
     """
     An attention layer that allows for downscaling the size of the embedding
     after projection to queries, keys, and values.
+    Args:
+        embedding_dim (int): Size of the input embeddings
+        num_heads (int): Number of attention heads
+        downsample_rate (int): Downsample rate, default is 1
+        dropout (float): Dropout rate, default is 0.1
+        n_masked_patch (int): Number of masked patches, default is 0
+        mask_drop (float): Mask drop rate, default is 0
     """
 
     def __init__(
@@ -179,6 +217,11 @@ class MutiHeadAttention_modify(nn.Module):
     """
     An attention layer that allows for downscaling the size of the embedding
     after projection to queries, keys, and values.
+    Args:
+        embedding_dim (int): Size of the input embeddings
+        num_heads (int): Number of attention heads
+        downsample_rate (int): Downsample rate, default is 1
+        dropout (float): Dropout rate, default is 0.
     """
 
     def __init__(
@@ -228,6 +271,19 @@ class MutiHeadAttention_modify(nn.Module):
 
 
 class ACMIL_GA(nn.Module):
+    """
+    ACMIL model with Gated Attention
+    Args:
+        embed_size (int): Size of the input embeddings
+        hidden_size (int): Size of the hidden layer
+        n_classes (int): Number of classes
+        D (int): Dimension of the attention output, default is 128
+        droprate (float): Dropout rate, default is 0
+        n_token (int): Number of attention tokens, default is 1
+        n_masked_patch (int): Number of masked patches, default is 0
+        mask_drop (float): Mask drop rate, default is 0
+        loss_fn (nn.Module): Loss function, default is nn.CrossEntropyLoss()
+    """
     def __init__(self, embed_size,hidden_size,n_classes, D=128, droprate=0, n_token=1, n_masked_patch=0, mask_drop=0,loss_fn = nn.CrossEntropyLoss()):
         super(ACMIL_GA, self).__init__()
         

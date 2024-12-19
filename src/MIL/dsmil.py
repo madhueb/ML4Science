@@ -5,7 +5,17 @@ from torch.autograd import Variable
 from src.utils import neg_log_bernouilli
 import numpy as np
 
+
+"""
+File containing the Deep Supervised Multiple Instance Learning model
+"""
 class FCLayer(nn.Module):
+    """
+    Fully connected layer
+    Args:
+        in_size (int): input size
+        out_size (int): output size
+    """
     def __init__(self, in_size, out_size=1):
         super(FCLayer, self).__init__()
         self.fc = nn.Sequential(nn.Linear(in_size, out_size))
@@ -14,6 +24,13 @@ class FCLayer(nn.Module):
         return feats, x
 
 class IClassifier(nn.Module):
+    """
+    Instance classifier
+    Args:
+        feature_size (int): size of the feature vector
+        output_class (int): number of classes
+        feature_extractor (nn.Module): feature extractor
+    """
     def __init__(self, feature_size, output_class, feature_extractor=nn.Identity()):
         super(IClassifier, self).__init__()
         
@@ -28,6 +45,16 @@ class IClassifier(nn.Module):
         return feats.view(feats.shape[0], -1), c
 
 class BClassifier(nn.Module):
+    """
+    Bag classifier
+    Args:
+        input_size (int): input size
+        output_class (int): number of classes
+        dropout_v (float): dropout value
+        nonlinear (bool): whether to use non-linearity
+        passing_v (bool): whether to pass the instance representation to the bag classifier
+    """
+
     def __init__(self, input_size, output_class, dropout_v=0.0, nonlinear=True, passing_v=False): # K, L, N
         super(BClassifier, self).__init__()
         if nonlinear:
@@ -65,6 +92,13 @@ class BClassifier(nn.Module):
         return C, A, B 
     
 class MILNet(nn.Module):
+    """
+    Deep Supervised Multiple Instance Learning model
+    Args:
+        i_classifier (nn.Module): instance classifier
+        b_classifier (nn.Module): bag classifier
+        threshold (float): threshold for classification
+    """
     def __init__(self, i_classifier, b_classifier, threshold):
         super(MILNet, self).__init__()
         self.i_classifier = i_classifier

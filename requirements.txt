@@ -2,4 +2,8 @@ torch
 numpy
 torch_geometric
 tqdm
-seaborn
+matplotlib
+scipy
+scikit-learn
+nystrom_attention
+itertools
